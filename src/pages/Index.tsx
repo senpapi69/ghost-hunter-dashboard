@@ -11,10 +11,15 @@ import { useAppStore } from '@/stores/appStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { fetchBusinesses } from '@/lib/airtable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 
 const Index = () => {
   const { selectedBusiness, setSelectedBusiness } = useAppStore();
-  
+
   const { data: businesses = [] } = useQuery({
     queryKey: ['businesses'],
     queryFn: fetchBusinesses,
@@ -30,37 +35,59 @@ const Index = () => {
     <div className="min-h-screen h-screen bg-background flex flex-col overflow-hidden">
       {/* Scanline overlay */}
       <div className="fixed inset-0 scanlines pointer-events-none z-50" />
-      
+
       <Header />
 
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <aside className="w-72 border-r border-primary/20 bg-card/50 flex flex-col overflow-hidden flex-shrink-0">
-          <div className="flex-1 overflow-hidden">
-            <BusinessList
-              selectedId={selectedBusiness?.id || null}
-              onSelect={setSelectedBusiness}
-            />
-          </div>
-          <DailyStats />
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 bg-card/30 overflow-hidden">
-          <MainTabs business={selectedBusiness} />
-        </div>
-
-        {/* Right Sidebar */}
-        <aside className="w-72 border-l border-primary/20 bg-card/50 flex-shrink-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="divide-y divide-primary/10">
-              <WebsiteBuilder business={selectedBusiness} />
-              <CallLog business={selectedBusiness} />
-              <QuickOutreach business={selectedBusiness} />
-              <AddCustomerForm />
+      <main className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Left Sidebar - Resizable */}
+          <ResizablePanel
+            defaultSize={20}
+            minSize={15}
+            maxSize={35}
+            className="bg-card/50"
+          >
+            <div className="h-full flex flex-col overflow-hidden border-r border-primary/20">
+              <div className="flex-1 overflow-hidden">
+                <BusinessList
+                  selectedId={selectedBusiness?.id || null}
+                  onSelect={setSelectedBusiness}
+                />
+              </div>
+              <DailyStats />
             </div>
-          </ScrollArea>
-        </aside>
+          </ResizablePanel>
+
+          <ResizableHandle className="w-1 bg-primary/10 hover:bg-primary/30 transition-colors data-[resize-handle-active]:bg-primary/50" />
+
+          {/* Main Content */}
+          <ResizablePanel defaultSize={55} minSize={30}>
+            <div className="h-full bg-card/30 overflow-hidden">
+              <MainTabs business={selectedBusiness} />
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle className="w-1 bg-primary/10 hover:bg-primary/30 transition-colors data-[resize-handle-active]:bg-primary/50" />
+
+          {/* Right Sidebar - Resizable */}
+          <ResizablePanel
+            defaultSize={25}
+            minSize={18}
+            maxSize={35}
+            className="bg-card/50"
+          >
+            <div className="h-full border-l border-primary/20 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="divide-y divide-primary/10">
+                  <WebsiteBuilder business={selectedBusiness} />
+                  <CallLog business={selectedBusiness} />
+                  <QuickOutreach business={selectedBusiness} />
+                  <AddCustomerForm />
+                </div>
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
 
       {/* Keyboard shortcuts hint */}
