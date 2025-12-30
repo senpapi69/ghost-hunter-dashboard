@@ -3,7 +3,7 @@ import { Header } from '@/components/Header';
 import { BusinessList } from '@/components/BusinessList';
 import { DailyStats } from '@/components/DailyStats';
 import { MainTabs } from '@/components/MainTabs';
-import { WebsiteBuilder } from '@/components/WebsiteBuilder';
+import { DeployInvoice } from '@/components/DeployInvoice';
 import { CallLog } from '@/components/CallLog';
 import { QuickOutreach } from '@/components/QuickOutreach';
 import { AddCustomerForm } from '@/components/AddCustomerForm';
@@ -79,7 +79,7 @@ const Index = () => {
             <div className="h-full border-l border-primary/20 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="divide-y divide-primary/10">
-                  <WebsiteBuilder business={selectedBusiness} />
+                  <DeployInvoice business={selectedBusiness} />
                   <CallLog business={selectedBusiness} />
                   <QuickOutreach business={selectedBusiness} />
                   <AddCustomerForm />
@@ -98,8 +98,8 @@ const Index = () => {
           Navigate
         </span>
         <span>
-          <kbd className="bg-muted px-1 mx-0.5">B</kbd>
-          Build
+          <kbd className="bg-muted px-1 mx-0.5">D</kbd>
+          Deploy
         </span>
         <span>
           <kbd className="bg-muted px-1 mx-0.5">C</kbd>
