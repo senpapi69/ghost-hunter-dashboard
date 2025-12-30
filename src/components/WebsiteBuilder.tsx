@@ -30,7 +30,10 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
       id: jobId,
       businessId: business.id,
       businessName: business.name,
+      package: business.package || 'Business',
+      amount: business.amount || 999,
       status: 'building',
+      paymentStatus: 'pending',
       triggeredAt: new Date(),
     });
 
@@ -95,7 +98,7 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
       <div className="flex items-center gap-2 border-b border-primary/20 pb-2">
         <Rocket className="h-4 w-4 text-primary" />
         <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
-          Deploy Website
+          Quick Deploy
         </h3>
       </div>
 
