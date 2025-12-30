@@ -127,11 +127,88 @@ export async function sendEmail(
     return response.ok;
   } catch (error) {
     console.error('Email webhook failed:', error);
-    // Demo mode: simulate success
     if (DEMO_MODE) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       return true;
     }
     return false;
+  }
+}
+
+const N8N_DEPLOY_WEBHOOK_URL =
+  import.meta.env.VITE_N8N_DEPLOY_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/deploy-and-invoice';
+
+export interface DeployAndInvoicePayload {
+  placeId: string;
+  businessName: string;
+  phone: string;
+  address: string;
+  email: string;
+  package: string;
+  amount: number;
+}
+
+export interface DeployAndInvoiceResponse {
+  success: boolean;
+  buildId?: string;
+  paymentLink?: string;
+  previewUrl?: string;
+  isDemo?: boolean;
+  error?: string;
+}
+
+export async function triggerDeployAndInvoice(
+  payload: DeployAndInvoicePayload
+): Promise<DeployAndInvoiceResponse> {
+  const slug = payload.businessName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(N8N_DEPLOY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...payload,
+        timestamp: new Date().toISOString(),
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Webhook returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      buildId: data.buildId,
+      paymentLink: data.paymentLink,
+      previewUrl: data.previewUrl,
+    };
+  } catch (error) {
+    console.error('Deploy webhook failed:', error);
+
+    if (DEMO_MODE) {
+      console.log('Demo mode: Simulating successful deploy and invoice');
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      return {
+        success: true,
+        buildId: `demo-${Date.now()}`,
+        paymentLink: `https://buy.stripe.com/demo_${slug}`,
+        previewUrl: `https://${slug}.onrender.com`,
+        isDemo: true,
+      };
+    }
+
+    return { success: false };
   }
 }
