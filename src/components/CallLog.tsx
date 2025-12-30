@@ -11,6 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Business, CallOutcome } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +38,7 @@ const outcomeButtons: { outcome: CallOutcome; icon: typeof Check; label: string;
 ];
 
 export function CallLog({ business }: CallLogProps) {
+  const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const { addCallLog, callLogs, incrementStat } = useAppStore();
@@ -49,6 +57,8 @@ export function CallLog({ business }: CallLogProps) {
       loggedAt: new Date(),
     });
 
+    incrementStat('callsMade');
+    
     if (outcome === 'Interested') {
       incrementStat('conversions');
     }
@@ -60,85 +70,111 @@ export function CallLog({ business }: CallLogProps) {
 
     setNotes('');
     setFollowUpDate('');
+    setOpen(false);
   };
 
-  const recentCalls = callLogs.slice(0, 5);
+  const recentCalls = callLogs.slice(0, 3);
 
   return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-2">
+    <div className="p-3">
+      <div className="flex items-center gap-2 border-b border-primary/20 pb-2 mb-3">
         <Phone className="h-4 w-4 text-primary" />
         <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
           Call Log
         </h3>
       </div>
 
-      {business ? (
-        <>
-          {/* Quick Outcome Buttons */}
-          <div className="flex flex-wrap gap-1">
-            {outcomeButtons.map((btn) => (
-              <Button
-                key={btn.outcome}
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOutcome(btn.outcome)}
-                className={cn('h-7 text-xs px-2', btn.color)}
-                title={btn.label}
-              >
-                <btn.icon className="h-3 w-3" />
-              </Button>
-            ))}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full cyber-button h-10"
+            disabled={!business}
+          >
+            <Phone className="h-4 w-4 mr-2" />
+            LOG CALL
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="bg-card border-primary/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-primary flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Log Call — {business?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-2">
+            {/* Quick Outcome Buttons */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Outcome</p>
+              <div className="grid grid-cols-5 gap-2">
+                {outcomeButtons.map((btn) => (
+                  <Button
+                    key={btn.outcome}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOutcome(btn.outcome)}
+                    className={cn('h-14 flex-col gap-1 border border-primary/20', btn.color)}
+                    title={btn.label}
+                  >
+                    <btn.icon className="h-4 w-4" />
+                    <span className="text-[10px]">{btn.label.split(' ')[0]}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Notes</p>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Call notes..."
+                className="cyber-input min-h-[80px] text-sm resize-none"
+              />
+            </div>
+
+            {/* Follow-up Date */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Follow-up Date</p>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="cyber-input text-sm flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => notes && handleOutcome('Answered')}
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Notes */}
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Call notes..."
-            className="cyber-input min-h-[60px] text-xs resize-none"
-          />
-
-          {/* Follow-up Date */}
-          <div className="flex gap-2">
-            <Input
-              type="date"
-              value={followUpDate}
-              onChange={(e) => setFollowUpDate(e.target.value)}
-              className="cyber-input text-xs flex-1"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => notes && handleOutcome('Answered')}
-              className="border-primary/30 hover:bg-primary/10"
-            >
-              <Save className="h-3 w-3" />
-            </Button>
-          </div>
-        </>
-      ) : (
-        <p className="text-xs text-muted-foreground text-center py-2">
-          Select a target to log calls
-        </p>
-      )}
-
-      {/* Recent Calls */}
+      {/* Recent Calls - compact list */}
       {recentCalls.length > 0 && (
-        <div className="border-t border-primary/20 pt-2">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+        <div className="mt-3 pt-2 border-t border-primary/10">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
             Recent
           </p>
-          <ScrollArea className="h-24">
-            <div className="space-y-1">
+          <ScrollArea className="h-16">
+            <div className="space-y-0.5">
               {recentCalls.map((call) => (
                 <div
                   key={call.id}
-                  className="text-xs flex items-center justify-between gap-2 py-1 border-b border-primary/5"
+                  className="text-[10px] flex items-center justify-between gap-1 py-0.5"
                 >
-                  <span className="truncate flex-1">{call.businessName}</span>
-                  <span className="text-muted-foreground">{call.outcome}</span>
-                  <span className="text-muted-foreground/50 text-[10px]">
+                  <span className="truncate flex-1 text-muted-foreground">{call.businessName}</span>
+                  <span className="text-primary/70">{call.outcome}</span>
+                  <span className="text-muted-foreground/50">
                     {format(new Date(call.loggedAt), 'HH:mm')}
                   </span>
                 </div>

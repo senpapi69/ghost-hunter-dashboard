@@ -82,7 +82,7 @@ const Index = () => {
                   <DeployInvoice business={selectedBusiness} />
                   <CallLog business={selectedBusiness} />
                   <QuickOutreach business={selectedBusiness} />
-                  <AddCustomerForm />
+                  <AddCustomerForm business={selectedBusiness} />
                 </div>
               </ScrollArea>
             </div>
