@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check } from 'lucide-react';
+import { useState } from 'react';
+import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard } from 'lucide-react';
 import { Business, PACKAGES, PackageType, BuildStatus, PaymentStatus } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
 import { triggerDeployAndInvoice } from '@/lib/webhook';
@@ -22,24 +22,18 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
   const [open, setOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<{
     paymentLink?: string;
     buildStatus: BuildStatus;
     paymentStatus: PaymentStatus;
     previewUrl?: string;
+    amount: number;
+    packageName: PackageType;
   } | null>(null);
   
   const { addBuildJob, updateBuildJob, incrementStat, triggerCelebration } = useAppStore();
   const { toast } = useToast();
-
-  // Pre-fill email when business changes
-  useEffect(() => {
-    if (business?.email) {
-      setEmail(business.email);
-    }
-  }, [business?.email]);
 
   const getAmount = (): number => {
     if (selectedPackage === 'Custom') {
@@ -50,7 +44,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
   };
 
   const handleDeploy = async () => {
-    if (!business || !selectedPackage || !email) return;
+    if (!business || !selectedPackage) return;
     
     const amount = getAmount();
     if (amount <= 0) {
@@ -63,6 +57,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     }
 
     setIsDeploying(true);
+    setOpen(false);
     
     const jobId = `build-${Date.now()}`;
     
@@ -83,7 +78,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
         businessName: business.name,
         phone: business.phone,
         address: business.address,
-        email,
+        email: '', // Not used - payment happens on demo site
         package: selectedPackage,
         amount,
       });
@@ -99,13 +94,16 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           buildStatus: 'building',
           paymentStatus: 'pending',
           previewUrl: result.previewUrl,
+          amount,
+          packageName: selectedPackage,
         });
         
         toast({
-          title: 'Invoice Sent!',
-          description: `Site building. Invoice sent to ${email}`,
+          title: 'Site Deploying!',
+          description: 'Demo site with Stripe checkout is being built',
         });
 
+        // Simulate build completion after 3 seconds
         setTimeout(() => {
           updateBuildJob(jobId, { status: 'live' });
           setDeployResult(prev => prev ? { ...prev, buildStatus: 'live' } : null);
@@ -143,13 +141,12 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
   const handleMarkAsPaid = () => {
     if (!business || !deployResult) return;
     
-    const amount = getAmount();
     setDeployResult(prev => prev ? { ...prev, paymentStatus: 'paid' } : null);
-    triggerCelebration(business.name, amount);
+    triggerCelebration(business.name, deployResult.amount);
     
     toast({
-      title: 'Payment Recorded',
-      description: `$${amount.toLocaleString()} marked as paid`,
+      title: 'Payment Received!',
+      description: `$${deployResult.amount.toLocaleString()} from ${business.name}`,
     });
   };
 
@@ -157,7 +154,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     navigator.clipboard.writeText(text);
     toast({
       title: 'Copied!',
-      description: 'Payment link copied to clipboard',
+      description: 'Demo link copied to clipboard',
     });
   };
 
@@ -177,47 +174,129 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
         </h3>
       </div>
 
-      {/* If deployed, show status inline */}
-      {deployResult && business ? (
+      {/* Deploying state */}
+      {isDeploying && business && (
         <div className="space-y-3">
-          <div className="bg-secondary/30 border border-primary/10 p-2 text-xs">
-            <span className="font-bold">{business.name}</span>
-            <span className="text-muted-foreground ml-2">{selectedPackage} — ${getAmount().toLocaleString()}</span>
+          <div className="bg-secondary/30 border border-warning/30 p-3 animate-pulse">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-warning" />
+              <span className="font-bold text-foreground">{business.name}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Building demo site with Stripe checkout...</p>
+          </div>
+        </div>
+      )}
+
+      {/* If deployed, show status */}
+      {deployResult && business && !isDeploying ? (
+        <div className="space-y-3">
+          {/* Business & Package Info */}
+          <div className="bg-secondary/30 border border-primary/20 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🏗️</span>
+              <span className="font-bold text-foreground">{business.name}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Package: {deployResult.packageName} — <span className="text-success font-mono">${deployResult.amount.toLocaleString()}</span>
+            </p>
           </div>
 
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Build:</span>
-              <span className={deployResult.buildStatus === 'live' ? 'text-success' : 'text-warning animate-pulse'}>
-                {deployResult.buildStatus === 'live' ? '✅ Live' : '⏳ Building...'}
-              </span>
+          {/* Build Status */}
+          <div className="flex items-center justify-between py-2 border-b border-primary/10">
+            <span className="text-xs text-muted-foreground">Build Status:</span>
+            <span className={`text-xs font-mono ${
+              deployResult.buildStatus === 'live' ? 'text-success' :
+              deployResult.buildStatus === 'building' ? 'text-warning animate-pulse' :
+              'text-muted-foreground'
+            }`}>
+              {deployResult.buildStatus === 'live' ? '✅ Live' :
+               deployResult.buildStatus === 'building' ? '⏳ Building...' :
+               deployResult.buildStatus}
+            </span>
+          </div>
+          
+          {/* Demo URL */}
+          {deployResult.previewUrl && deployResult.buildStatus === 'live' && (
+            <div className="flex items-center justify-between py-2 border-b border-primary/10">
+              <span className="text-xs text-muted-foreground">Demo URL:</span>
+              <a 
+                href={deployResult.previewUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                View Demo <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment:</span>
-              <span className={deployResult.paymentStatus === 'paid' ? 'text-success' : 'text-warning'}>
-                {deployResult.paymentStatus === 'paid' ? '💰 PAID' : '📧 Sent'}
-              </span>
+          )}
+
+          {/* Payment Status Box */}
+          <div className={`p-4 border-2 transition-all ${
+            deployResult.paymentStatus === 'paid' 
+              ? 'border-success bg-success/10 glow-success' 
+              : 'border-warning bg-warning/5 animate-pulse'
+          }`}>
+            <div className="flex items-center justify-center gap-2">
+              {deployResult.paymentStatus === 'paid' ? (
+                <>
+                  <Check className="h-5 w-5 text-success" />
+                  <span className="font-display font-bold text-success">PAID ✓</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5 text-warning" />
+                  <span className="font-display font-bold text-warning">WAITING FOR PAYMENT</span>
+                </>
+              )}
             </div>
+            <p className={`text-center font-mono text-xl font-bold mt-2 ${
+              deployResult.paymentStatus === 'paid' ? 'text-success' : 'text-foreground'
+            }`}>
+              ${deployResult.amount.toLocaleString()}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            {deployResult.paymentLink && (
-              <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => copyToClipboard(deployResult.paymentLink!)}>
-                <Copy className="h-3 w-3 mr-1" /> Copy Link
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-2">
+            {deployResult.previewUrl && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs h-8" 
+                onClick={() => copyToClipboard(deployResult.previewUrl!)}
+              >
+                <Copy className="h-3 w-3 mr-1" /> Copy Demo Link
               </Button>
             )}
-            {deployResult.paymentStatus !== 'paid' && (
-              <Button variant="outline" size="sm" className="text-[10px] h-7 border-success/40 text-success" onClick={handleMarkAsPaid}>
-                <Check className="h-3 w-3 mr-1" /> Paid
-              </Button>
-            )}
+            <Button variant="outline" size="sm" className="text-xs h-8">
+              <Send className="h-3 w-3 mr-1" /> Resend to Customer
+            </Button>
           </div>
 
-          <Button variant="ghost" size="sm" className="w-full text-[10px] text-muted-foreground" onClick={resetDeploy}>
-            New Invoice
+          {/* Mark as Paid (for manual/cash payments) */}
+          {deployResult.paymentStatus !== 'paid' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8 border-success/40 text-success hover:bg-success/10"
+              onClick={handleMarkAsPaid}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Mark as Paid (Cash/Transfer)
+            </Button>
+          )}
+
+          {/* Reset Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-[10px] text-muted-foreground"
+            onClick={resetDeploy}
+          >
+            Create New Deployment
           </Button>
         </div>
-      ) : (
+      ) : !isDeploying && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button
@@ -226,111 +305,99 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
               disabled={!business}
             >
               <Zap className="h-4 w-4 mr-2" />
-              DEPLOY SITE
+              {business ? `DEPLOY SITE — ${business.name}` : 'DEPLOY SITE'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-primary/30 max-w-lg">
+          <DialogContent className="bg-[#0a0a0a] border-primary/50 max-w-lg glow-cyan">
             <DialogHeader>
-              <DialogTitle className="font-display text-primary flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                <DollarSign className="h-4 w-4" />
-                Deploy & Invoice — {business?.name}
+              <DialogTitle className="font-display text-primary flex items-center gap-2 text-lg">
+                <Zap className="h-5 w-5" />
+                Deploy Site
               </DialogTitle>
             </DialogHeader>
             
             {business && (
               <div className="space-y-4 pt-2">
                 {/* Business Info */}
-                <div className="bg-secondary/30 border border-primary/10 p-3">
-                  <h3 className="font-bold text-foreground">{business.name}</h3>
-                  <p className="text-xs text-muted-foreground">{business.phone} • {business.address}</p>
-                  <p className="text-[10px] text-muted-foreground/60 font-mono mt-1">ID: {business.placeId}</p>
+                <div className="bg-secondary/30 border border-primary/20 p-4">
+                  <h3 className="font-bold text-foreground text-lg">{business.name}</h3>
+                  <p className="text-sm text-muted-foreground">{business.phone}</p>
+                  <p className="text-sm text-muted-foreground">{business.address}</p>
                 </div>
 
                 {/* Package Selection */}
-                <div className="grid grid-cols-2 gap-2">
-                  {PACKAGES.map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => setSelectedPackage(pkg.id)}
-                      className={`p-3 border transition-all text-center ${
-                        selectedPackage === pkg.id
-                          ? 'border-primary bg-primary/10 glow-cyan'
-                          : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
-                      }`}
-                    >
-                      <div className="text-lg mb-1">{pkg.icon}</div>
-                      <div className="font-display text-xs font-bold uppercase">{pkg.name}</div>
-                      <div className="text-success font-mono font-bold">${pkg.price}</div>
-                      <div className="text-[10px] text-muted-foreground">{pkg.description}</div>
-                    </button>
-                  ))}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Select Package</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {PACKAGES.map((pkg) => (
+                      <button
+                        key={pkg.id}
+                        onClick={() => setSelectedPackage(pkg.id)}
+                        className={`p-4 border transition-all text-center ${
+                          selectedPackage === pkg.id
+                            ? 'border-primary bg-primary/10 glow-cyan'
+                            : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
+                        }`}
+                      >
+                        <div className="text-2xl mb-2">{pkg.icon}</div>
+                        <div className="font-display text-sm font-bold uppercase">{pkg.name}</div>
+                        <div className="text-success font-mono font-bold text-lg">${pkg.price}</div>
+                        <div className="text-[11px] text-muted-foreground mt-1">{pkg.description}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Custom Amount */}
                 <button
                   onClick={() => setSelectedPackage('Custom')}
-                  className={`w-full p-3 border transition-all ${
+                  className={`w-full p-4 border transition-all ${
                     selectedPackage === 'Custom'
                       ? 'border-primary bg-primary/10 glow-cyan'
                       : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
                   }`}
                 >
                   <div className="flex items-center gap-2 justify-center">
-                    <span className="text-lg">✏️</span>
-                    <span className="font-display text-xs font-bold uppercase">Custom Amount</span>
+                    <span className="text-xl">✏️</span>
+                    <span className="font-display text-sm font-bold uppercase">Custom Amount</span>
                   </div>
                   {selectedPackage === 'Custom' && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-success font-bold">$</span>
+                    <div className="mt-3 flex items-center gap-2 max-w-xs mx-auto">
+                      <span className="text-success font-bold text-xl">$</span>
                       <Input
                         type="number"
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
                         placeholder="Enter amount"
-                        className="cyber-input text-center font-mono"
+                        className="cyber-input text-center font-mono text-lg"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   )}
                 </button>
 
-                {/* Email Field */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Customer Email (for receipt)</label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="customer@email.com"
-                    className="cyber-input"
-                  />
+                {/* Deploy Button */}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setOpen(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeploy}
+                    disabled={!selectedPackage || (selectedPackage === 'Custom' && getAmount() <= 0)}
+                    className="flex-[2] cyber-button h-12 text-sm"
+                  >
+                    🚀 DEPLOY SITE
+                    {getAmount() > 0 && <span className="ml-2">— ${getAmount().toLocaleString()}</span>}
+                  </Button>
                 </div>
 
-                {/* Deploy Button */}
-                <Button
-                  onClick={handleDeploy}
-                  disabled={!selectedPackage || !email || isDeploying || (selectedPackage === 'Custom' && getAmount() <= 0)}
-                  className="w-full cyber-button h-12 text-sm"
-                >
-                  {isDeploying ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Deploying...
-                    </>
-                  ) : (
-                    <>
-                      🚀 DEPLOY & SEND INVOICE
-                      {getAmount() > 0 && <span className="ml-2">— ${getAmount().toLocaleString()}</span>}
-                    </>
-                  )}
-                </Button>
-
-                {(!selectedPackage || !email) && (
-                  <p className="text-[10px] text-muted-foreground text-center">
-                    Select a package and enter email to continue
-                  </p>
-                )}
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Demo site will include Stripe checkout for customer payment
+                </p>
               </div>
             )}
           </DialogContent>
