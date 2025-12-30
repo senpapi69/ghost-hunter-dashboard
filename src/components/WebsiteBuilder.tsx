@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Rocket, Loader2, CheckCircle, XCircle, Globe } from 'lucide-react';
+import { Rocket, Loader2, CheckCircle, XCircle, Globe, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Business, BuildStatus } from '@/types/business';
 import { triggerWebsiteBuild } from '@/lib/webhook';
@@ -14,6 +14,7 @@ interface WebsiteBuilderProps {
 export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
   const [status, setStatus] = useState<BuildStatus | 'ready'>('ready');
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const { toast } = useToast();
   const { addBuildJob, updateBuildJob, incrementStat } = useAppStore();
 
@@ -22,6 +23,7 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
 
     setStatus('building');
     setDemoUrl(null);
+    setIsDemo(false);
 
     const jobId = `build-${Date.now()}`;
     addBuildJob({
@@ -32,29 +34,46 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
       triggeredAt: new Date(),
     });
 
-    const result = await triggerWebsiteBuild(business);
+    try {
+      const result = await triggerWebsiteBuild(business);
 
-    if (result.success) {
-      setStatus('live');
-      setDemoUrl(result.demoUrl || null);
-      updateBuildJob(jobId, {
-        status: 'live',
-        previewUrl: result.demoUrl,
-      });
-      incrementStat('sitesBuilt');
-      toast({
-        title: 'Build Complete',
-        description: `Website deployed for ${business.name}`,
-      });
-    } else {
+      if (result.success) {
+        setStatus('live');
+        setDemoUrl(result.demoUrl || null);
+        setIsDemo(result.isDemo || false);
+        updateBuildJob(jobId, {
+          status: 'live',
+          previewUrl: result.demoUrl,
+        });
+        incrementStat('sitesBuilt');
+        toast({
+          title: result.isDemo ? 'Demo Build Complete' : 'Build Complete',
+          description: result.isDemo 
+            ? `Simulated deployment for ${business.name}` 
+            : `Website deployed for ${business.name}`,
+        });
+      } else {
+        setStatus('error');
+        updateBuildJob(jobId, {
+          status: 'error',
+          errorMessage: 'Webhook unreachable - check CORS/network',
+        });
+        toast({
+          title: 'Build Failed',
+          description: 'Webhook unreachable. Check n8n configuration.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Build error:', error);
       setStatus('error');
       updateBuildJob(jobId, {
         status: 'error',
-        errorMessage: 'Build failed - check webhook configuration',
+        errorMessage: 'Unexpected error during build',
       });
       toast({
-        title: 'Build Failed',
-        description: 'Check webhook configuration',
+        title: 'Build Error',
+        description: 'An unexpected error occurred',
         variant: 'destructive',
       });
     }
@@ -64,7 +83,7 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
     ready: { icon: Globe, label: 'Ready to Build', color: 'text-muted-foreground' },
     queued: { icon: Globe, label: 'Queued', color: 'text-muted-foreground' },
     building: { icon: Loader2, label: 'Building...', color: 'text-warning' },
-    live: { icon: CheckCircle, label: 'Site Live!', color: 'text-success' },
+    live: { icon: CheckCircle, label: isDemo ? 'Demo Live!' : 'Site Live!', color: 'text-success' },
     error: { icon: XCircle, label: 'Build Failed', color: 'text-destructive' },
   };
 
@@ -118,6 +137,13 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
             <span className={currentStatus.color}>{currentStatus.label}</span>
           </div>
 
+          {isDemo && status === 'live' && (
+            <div className="flex items-center gap-1.5 text-xs text-warning bg-warning/10 px-2 py-1 border border-warning/30">
+              <AlertTriangle className="h-3 w-3" />
+              <span>Demo mode - webhook bypassed</span>
+            </div>
+          )}
+
           {status === 'live' && demoUrl && (
             <a
               href={`https://${demoUrl}`}
@@ -127,6 +153,12 @@ export function WebsiteBuilder({ business }: WebsiteBuilderProps) {
             >
               {demoUrl}
             </a>
+          )}
+
+          {status === 'error' && (
+            <p className="text-xs text-destructive">
+              n8n webhook failed. Ensure CORS is enabled on your n8n server.
+            </p>
           )}
         </>
       ) : (
