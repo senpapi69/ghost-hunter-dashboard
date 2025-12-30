@@ -22,6 +22,7 @@ export function AddCustomerForm() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    email: '',
     address: '',
     placeId: '',
     description: '',
@@ -49,6 +50,7 @@ export function AddCustomerForm() {
       ...formData,
       rating: 0,
       notes: '',
+      paid: false,
     });
 
     setIsSubmitting(false);
@@ -62,6 +64,7 @@ export function AddCustomerForm() {
       setFormData({
         name: '',
         phone: '',
+        email: '',
         address: '',
         placeId: '',
         description: '',
@@ -108,6 +111,18 @@ export function AddCustomerForm() {
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             className="cyber-input h-8 text-xs"
             required
+          />
+        </div>
+
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Email
+          </Label>
+          <Input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="cyber-input h-8 text-xs"
           />
         </div>
 
@@ -162,7 +177,8 @@ export function AddCustomerForm() {
             <SelectContent className="bg-card border-primary/30">
               <SelectItem value="New Lead">New Lead</SelectItem>
               <SelectItem value="Called">Called</SelectItem>
-              <SelectItem value="Sold">Sold</SelectItem>
+              <SelectItem value="Invoice Sent">Invoice Sent</SelectItem>
+              <SelectItem value="Paid">Paid</SelectItem>
               <SelectItem value="Built">Built</SelectItem>
             </SelectContent>
           </Select>
