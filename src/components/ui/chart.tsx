@@ -75,7 +75,18 @@ ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    const isKeySafe = /^[\w-]+$/.test(key);
+
+    // Fallback or skip if unsafe
+    if (!isKeySafe) {
+      console.warn("Invalid chart config key:", key);
+      return null;
+    }
+
+    const safeColor =
+      color && !color.includes(";") && !color.includes("}") ? color : null;
+
+    return safeColor ? `  --color-${key}: ${safeColor};` : null;
   })
   .join("\n")}
 }
