@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Loader2, Edit } from 'lucide-react';
+import { UserPlus, Loader2, Edit, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,25 +28,28 @@ interface AddCustomerFormProps {
   business?: Business | null;
 }
 
+const emptyForm = {
+  name: '',
+  phone: '',
+  email: '',
+  address: '',
+  placeId: '',
+  description: '',
+  status: 'New Lead' as BusinessStatus,
+};
+
 export function AddCustomerForm({ business }: AddCustomerFormProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    placeId: '',
-    description: '',
-    status: 'New Lead' as BusinessStatus,
-  });
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState(emptyForm);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { incrementStat } = useAppStore();
 
   // Pre-fill form when business is selected (for update mode)
   useEffect(() => {
-    if (business) {
+    if (business && open) {
       setFormData({
         name: business.name,
         phone: business.phone,
@@ -56,10 +59,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
         description: business.description,
         status: business.status,
       });
+      setIsEditMode(true);
     }
-  }, [business]);
+  }, [business, open]);
 
-  const isUpdateMode = !!business;
+  const handleClearForm = () => {
+    setFormData(emptyForm);
+    setIsEditMode(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +82,6 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
 
     setIsSubmitting(true);
 
-    // For now, create works the same way (would need update API for real update)
     const result = await createBusiness({
       ...formData,
       rating: business?.rating || 0,
@@ -87,25 +93,17 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
 
     if (result) {
       toast({
-        title: isUpdateMode ? 'Customer Updated' : 'Customer Added',
-        description: `${formData.name} ${isUpdateMode ? 'updated' : 'added to CRM'}`,
+        title: isEditMode ? 'Customer Updated' : 'Customer Added',
+        description: `${formData.name} ${isEditMode ? 'updated' : 'added to CRM'}`,
       });
       
-      if (!isUpdateMode) {
+      if (!isEditMode) {
         incrementStat('leadsToday');
-        setFormData({
-          name: '',
-          phone: '',
-          email: '',
-          address: '',
-          placeId: '',
-          description: '',
-          status: 'New Lead',
-        });
       }
       
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setOpen(false);
+      handleClearForm();
     } else {
       toast({
         title: 'Error',
@@ -115,36 +113,22 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
     }
   };
 
-  const resetForm = () => {
-    if (!business) {
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        address: '',
-        placeId: '',
-        description: '',
-        status: 'New Lead',
-      });
-    }
-  };
-
   return (
     <div className="p-3">
       <div className="flex items-center gap-2 border-b border-primary/20 pb-2 mb-3">
         <UserPlus className="h-4 w-4 text-primary" />
         <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
-          {isUpdateMode ? 'Update Customer' : 'Add to CRM'}
+          {business ? 'Update Customer' : 'Add to CRM'}
         </h3>
       </div>
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) handleClearForm(); }}>
         <DialogTrigger asChild>
           <Button
             variant="outline"
             className="w-full cyber-button h-10"
           >
-            {isUpdateMode ? (
+            {business ? (
               <>
                 <Edit className="h-4 w-4 mr-2" />
                 UPDATE CUSTOMER
@@ -157,13 +141,29 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-card border-primary/30 max-w-md">
+        <DialogContent className="bg-[#0a0a0a] border-primary/50 max-w-md glow-cyan">
           <DialogHeader>
             <DialogTitle className="font-display text-primary flex items-center gap-2">
-              {isUpdateMode ? <Edit className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-              {isUpdateMode ? `Update — ${business?.name}` : 'Add New Customer'}
+              {isEditMode ? <Edit className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {isEditMode ? 'Update Customer' : 'Add New Customer'}
             </DialogTitle>
           </DialogHeader>
+
+          {/* Editing indicator */}
+          {isEditMode && (
+            <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-2 -mt-2">
+              <span className="text-xs text-primary">
+                Editing: <span className="font-bold">{formData.name}</span>
+              </span>
+              <button
+                onClick={handleClearForm}
+                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+              >
+                <RotateCcw className="h-3 w-3" />
+                New Customer
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3 pt-2">
             <div className="grid grid-cols-2 gap-3">
@@ -273,8 +273,8 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  {isUpdateMode ? <Edit className="h-4 w-4 mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                  {isUpdateMode ? 'UPDATE CUSTOMER' : 'ADD CUSTOMER'}
+                  {isEditMode ? <Edit className="h-4 w-4 mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                  {isEditMode ? 'UPDATE CUSTOMER' : 'ADD CUSTOMER'}
                 </>
               )}
             </Button>

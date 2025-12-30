@@ -29,29 +29,30 @@ interface CallLogProps {
   business: Business | null;
 }
 
-const outcomeButtons: { outcome: CallOutcome; icon: typeof Check; label: string; color: string }[] = [
-  { outcome: 'Answered', icon: Check, label: 'Answered', color: 'text-success hover:bg-success/20' },
-  { outcome: 'No Answer', icon: X, label: 'No Answer', color: 'text-destructive hover:bg-destructive/20' },
-  { outcome: 'Callback', icon: Calendar, label: 'Callback', color: 'text-warning hover:bg-warning/20' },
-  { outcome: 'Not Interested', icon: Ban, label: 'Not Interested', color: 'text-muted-foreground hover:bg-muted' },
-  { outcome: 'Interested', icon: Star, label: 'Interested', color: 'text-primary hover:bg-primary/20' },
+const outcomeButtons: { outcome: CallOutcome; icon: typeof Check; label: string; color: string; emoji: string }[] = [
+  { outcome: 'Answered', icon: Check, label: 'Answered', color: 'text-success hover:bg-success/20 border-success/30', emoji: '✅' },
+  { outcome: 'No Answer', icon: X, label: 'No Answer', color: 'text-destructive hover:bg-destructive/20 border-destructive/30', emoji: '❌' },
+  { outcome: 'Callback', icon: Calendar, label: 'Callback', color: 'text-warning hover:bg-warning/20 border-warning/30', emoji: '📅' },
+  { outcome: 'Not Interested', icon: Ban, label: 'Not Interested', color: 'text-muted-foreground hover:bg-muted border-muted', emoji: '🚫' },
+  { outcome: 'Interested', icon: Star, label: 'Interested', color: 'text-primary hover:bg-primary/20 border-primary/30', emoji: '⭐' },
 ];
 
 export function CallLog({ business }: CallLogProps) {
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
+  const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(null);
   const { addCallLog, callLogs, incrementStat } = useAppStore();
   const { toast } = useToast();
 
-  const handleOutcome = (outcome: CallOutcome) => {
-    if (!business) return;
+  const handleSave = () => {
+    if (!business || !selectedOutcome) return;
 
     addCallLog({
       id: `call-${Date.now()}`,
       businessId: business.id,
       businessName: business.name,
-      outcome,
+      outcome: selectedOutcome,
       notes,
       followUpDate: followUpDate ? new Date(followUpDate) : undefined,
       loggedAt: new Date(),
@@ -59,17 +60,19 @@ export function CallLog({ business }: CallLogProps) {
 
     incrementStat('callsMade');
     
-    if (outcome === 'Interested') {
+    if (selectedOutcome === 'Interested') {
       incrementStat('conversions');
     }
 
     toast({
       title: 'Call Logged',
-      description: `${business.name} - ${outcome}`,
+      description: `${business.name} - ${selectedOutcome}`,
     });
 
+    // Reset and close
     setNotes('');
     setFollowUpDate('');
+    setSelectedOutcome(null);
     setOpen(false);
   };
 
@@ -84,7 +87,7 @@ export function CallLog({ business }: CallLogProps) {
         </h3>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSelectedOutcome(null); setNotes(''); setFollowUpDate(''); } }}>
         <DialogTrigger asChild>
           <Button
             variant="outline"
@@ -95,67 +98,77 @@ export function CallLog({ business }: CallLogProps) {
             LOG CALL
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-card border-primary/30 max-w-md">
+        <DialogContent className="bg-[#0a0a0a] border-primary/50 max-w-md glow-cyan">
           <DialogHeader>
             <DialogTitle className="font-display text-primary flex items-center gap-2">
               <Phone className="h-4 w-4" />
-              Log Call — {business?.name}
+              Log Call
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 pt-2">
-            {/* Quick Outcome Buttons */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Outcome</p>
-              <div className="grid grid-cols-5 gap-2">
-                {outcomeButtons.map((btn) => (
-                  <Button
-                    key={btn.outcome}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOutcome(btn.outcome)}
-                    className={cn('h-14 flex-col gap-1 border border-primary/20', btn.color)}
-                    title={btn.label}
-                  >
-                    <btn.icon className="h-4 w-4" />
-                    <span className="text-[10px]">{btn.label.split(' ')[0]}</span>
-                  </Button>
-                ))}
+          {business && (
+            <div className="space-y-4 pt-2">
+              {/* Business Name */}
+              <div className="bg-secondary/30 border border-primary/20 p-3">
+                <h3 className="font-bold text-foreground">{business.name}</h3>
+                <a href={`tel:${business.phone}`} className="text-sm text-primary hover:underline">{business.phone}</a>
               </div>
-            </div>
 
-            {/* Notes */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Notes</p>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Call notes..."
-                className="cyber-input min-h-[80px] text-sm resize-none"
-              />
-            </div>
+              {/* Outcome Buttons */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Outcome</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {outcomeButtons.map((btn) => (
+                    <button
+                      key={btn.outcome}
+                      onClick={() => setSelectedOutcome(btn.outcome)}
+                      className={cn(
+                        'h-16 flex flex-col items-center justify-center gap-1 border transition-all',
+                        selectedOutcome === btn.outcome 
+                          ? 'border-primary bg-primary/20 glow-cyan' 
+                          : `border-primary/20 bg-secondary/30 ${btn.color}`
+                      )}
+                    >
+                      <span className="text-lg">{btn.emoji}</span>
+                      <span className="text-[9px] leading-tight text-center">{btn.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Follow-up Date */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Follow-up Date</p>
-              <div className="flex gap-2">
+              {/* Notes */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Notes</p>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Call notes..."
+                  className="cyber-input min-h-[80px] text-sm resize-none"
+                />
+              </div>
+
+              {/* Follow-up Date */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Follow-up Date</p>
                 <Input
                   type="date"
                   value={followUpDate}
                   onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="cyber-input text-sm flex-1"
+                  className="cyber-input text-sm"
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => notes && handleOutcome('Answered')}
-                  className="border-primary/30 hover:bg-primary/10"
-                >
-                  <Save className="h-4 w-4" />
-                </Button>
               </div>
+
+              {/* Save Button */}
+              <Button
+                onClick={handleSave}
+                disabled={!selectedOutcome}
+                className="w-full cyber-button h-11"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                SAVE & CLOSE
+              </Button>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
