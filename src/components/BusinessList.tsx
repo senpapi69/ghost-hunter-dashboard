@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { fetchBusinesses } from '@/lib/airtable';
 import { Business } from '@/types/business';
 import { StarRating } from './StarRating';
+import { StatusPill } from './StatusPill';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface BusinessListProps {
@@ -19,48 +20,31 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
 
   if (isLoading) {
     return (
-      <div className="cyber-card h-full flex flex-col">
-        <div className="p-4 border-b border-primary/30">
-          <h2 className="font-display text-sm font-bold tracking-wider text-primary flex items-center gap-2">
-            <span className="w-2 h-2 bg-primary animate-pulse" />
-            TARGETS LOADING
+      <div className="h-full flex flex-col">
+        <div className="p-3 border-b border-primary/20 flex-shrink-0">
+          <h2 className="font-display text-xs font-bold tracking-wider text-primary flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-primary animate-pulse" />
+            LOADING TARGETS...
           </h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <Loader2 className="h-6 w-6 text-primary animate-spin" />
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !businesses?.length) {
     return (
-      <div className="cyber-card h-full flex flex-col">
-        <div className="p-4 border-b border-primary/30">
-          <h2 className="font-display text-sm font-bold tracking-wider text-destructive">
-            CONNECTION ERROR
+      <div className="h-full flex flex-col">
+        <div className="p-3 border-b border-primary/20">
+          <h2 className="font-display text-xs font-bold tracking-wider text-muted-foreground">
+            {error ? 'CONNECTION ERROR' : 'NO TARGETS'}
           </h2>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-muted-foreground text-sm text-center">
-            Failed to connect to database. Check API configuration.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!businesses || businesses.length === 0) {
-    return (
-      <div className="cyber-card h-full flex flex-col">
-        <div className="p-4 border-b border-primary/30">
-          <h2 className="font-display text-sm font-bold tracking-wider text-muted-foreground">
-            NO TARGETS FOUND
-          </h2>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-muted-foreground text-sm text-center">
-            No businesses in the database. Add one below.
+          <p className="text-muted-foreground text-xs text-center">
+            {error ? 'Check API configuration' : 'Add a customer to get started'}
           </p>
         </div>
       </div>
@@ -68,17 +52,17 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
   }
 
   return (
-    <div className="cyber-card h-full flex flex-col overflow-hidden">
-      <div className="p-4 border-b border-primary/30 flex-shrink-0">
-        <h2 className="font-display text-sm font-bold tracking-wider text-primary flex items-center gap-2">
-          <span className="w-2 h-2 bg-primary animate-pulse" />
+    <div className="h-full flex flex-col">
+      <div className="p-3 border-b border-primary/20 flex-shrink-0">
+        <h2 className="font-display text-xs font-bold tracking-wider text-primary flex items-center gap-2">
+          <span className="w-1.5 h-1.5 bg-primary animate-pulse" />
           TARGET LIST
           <span className="text-muted-foreground font-mono text-xs ml-auto">
             [{businesses.length}]
           </span>
         </h2>
       </div>
-      
+
       <ScrollArea className="flex-1">
         <div className="divide-y divide-primary/10">
           {businesses.map((business) => (
@@ -86,7 +70,7 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
               key={business.id}
               onClick={() => onSelect(business)}
               className={cn(
-                'w-full p-4 text-left transition-all duration-200 relative',
+                'w-full p-3 text-left transition-all duration-200 relative group',
                 'hover:bg-primary/5',
                 selectedId === business.id && 'bg-primary/10'
               )}
@@ -94,38 +78,41 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
               {/* Active indicator */}
               <div
                 className={cn(
-                  'absolute left-0 top-0 bottom-0 w-1 transition-all duration-300',
+                  'absolute left-0 top-0 bottom-0 w-0.5 transition-all duration-300',
                   selectedId === business.id
                     ? 'bg-primary glow-cyan'
-                    : 'bg-transparent'
+                    : 'bg-transparent group-hover:bg-primary/30'
                 )}
               />
-              
-              <div className="pl-3">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
+
+              <div className="pl-2">
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {business.rating === 5 && (
-                      <Star className="h-4 w-4 fill-primary text-primary flex-shrink-0" />
+                      <Star className="h-3 w-3 fill-primary text-primary flex-shrink-0" />
                     )}
-                    <span className="font-bold text-foreground">
+                    <span className="font-bold text-sm text-foreground truncate">
                       {business.name}
                     </span>
                   </div>
-                  <StarRating rating={business.rating} />
+                  <StatusPill status={business.status} />
                 </div>
-                
+
                 <a
                   href={`tel:${business.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 text-primary hover:text-glow transition-all mb-1"
+                  className="flex items-center gap-1.5 text-primary hover:text-glow transition-all mb-1"
                 >
-                  <Phone className="h-4 w-4" />
-                  <span className="font-mono text-lg">{business.phone}</span>
+                  <Phone className="h-3 w-3" />
+                  <span className="font-mono text-sm">{business.phone}</span>
                 </a>
-                
-                <div className="flex items-start gap-2 text-muted-foreground">
-                  <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-xs">{business.address}</span>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-1.5 text-muted-foreground flex-1 min-w-0">
+                    <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs truncate">{business.address}</span>
+                  </div>
+                  <StarRating rating={business.rating} />
                 </div>
               </div>
             </button>

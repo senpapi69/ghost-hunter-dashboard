@@ -23,7 +23,7 @@ export function StarRating({ rating, maxRating = 5, size = 'sm' }: StarRatingPro
             sizeClasses[size],
             i < rating
               ? 'fill-primary text-primary'
-              : 'fill-transparent text-muted-foreground/30'
+              : 'fill-transparent text-muted-foreground/20'
           )}
         />
       ))}

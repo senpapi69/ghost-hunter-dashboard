@@ -3,11 +3,19 @@ import { UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { createBusiness } from '@/lib/airtable';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppStore } from '@/stores/appStore';
+import { BusinessStatus } from '@/types/business';
 
 export function AddCustomerForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,11 +23,13 @@ export function AddCustomerForm() {
     name: '',
     phone: '',
     address: '',
+    placeId: '',
     description: '',
-    status: 'New Lead' as const,
+    status: 'New Lead' as BusinessStatus,
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { incrementStat } = useAppStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +48,6 @@ export function AddCustomerForm() {
     const result = await createBusiness({
       ...formData,
       rating: 0,
-      placeId: '',
       notes: '',
     });
 
@@ -47,12 +56,14 @@ export function AddCustomerForm() {
     if (result) {
       toast({
         title: 'Customer Added',
-        description: `${formData.name} has been added to the CRM.`,
+        description: `${formData.name} added to CRM`,
       });
+      incrementStat('leadsToday');
       setFormData({
         name: '',
         phone: '',
         address: '',
+        placeId: '',
         description: '',
         status: 'New Lead',
       });
@@ -67,78 +78,85 @@ export function AddCustomerForm() {
   };
 
   return (
-    <div className="cyber-card h-full flex flex-col">
-      <div className="p-4 border-b border-primary/30">
-        <h2 className="font-display text-sm font-bold tracking-wider text-primary flex items-center gap-2">
-          <UserPlus className="h-4 w-4" />
-          ADD CUSTOMER
-        </h2>
+    <div className="p-3 space-y-3">
+      <div className="flex items-center gap-2 border-b border-primary/20 pb-2">
+        <UserPlus className="h-4 w-4 text-primary" />
+        <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
+          Add to CRM
+        </h3>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 p-4 flex flex-col gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Business Name *
           </Label>
           <Input
-            id="name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter business name"
-            className="cyber-input"
+            className="cyber-input h-8 text-xs"
             required
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-muted-foreground">
-            Phone Number *
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Phone *
           </Label>
           <Input
-            id="phone"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="(555) 123-4567"
-            className="cyber-input"
+            className="cyber-input h-8 text-xs"
             required
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="address" className="text-xs uppercase tracking-wider text-muted-foreground">
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Address
           </Label>
           <Input
-            id="address"
             value={formData.address}
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="123 Main St, City, State"
-            className="cyber-input"
+            className="cyber-input h-8 text-xs"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description" className="text-xs uppercase tracking-wider text-muted-foreground">
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Place ID
+          </Label>
+          <Input
+            value={formData.placeId}
+            onChange={(e) => setFormData({ ...formData, placeId: e.target.value })}
+            className="cyber-input h-8 text-xs"
+          />
+        </div>
+
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Description
           </Label>
           <Textarea
-            id="description"
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Brief description of the business..."
-            className="cyber-input min-h-[80px] resize-none"
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            className="cyber-input min-h-[50px] text-xs resize-none"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="status" className="text-xs uppercase tracking-wider text-muted-foreground">
+        <div>
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Status
           </Label>
           <Select
             value={formData.status}
-            onValueChange={(value) => setFormData({ ...formData, status: value as typeof formData.status })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, status: value as BusinessStatus })
+            }
           >
-            <SelectTrigger className="cyber-input">
+            <SelectTrigger className="cyber-input h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-card border-primary/30">
@@ -150,25 +168,20 @@ export function AddCustomerForm() {
           </Select>
         </div>
 
-        <div className="mt-auto pt-4">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="cyber-button w-full h-12"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ADDING...
-              </>
-            ) : (
-              <>
-                <UserPlus className="mr-2 h-4 w-4" />
-                ADD TO CRM
-              </>
-            )}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="cyber-button w-full h-9 text-xs"
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              <UserPlus className="h-3 w-3 mr-1" />
+              ADD CUSTOMER
+            </>
+          )}
+        </Button>
       </form>
     </div>
   );
