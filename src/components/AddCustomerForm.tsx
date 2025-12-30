@@ -168,10 +168,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
           <form onSubmit={handleSubmit} className="space-y-3 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="customer-name"
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
                   Business Name *
                 </Label>
                 <Input
+                  id="customer-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="cyber-input h-9 text-sm"
@@ -180,10 +184,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="customer-phone"
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
                   Phone *
                 </Label>
                 <Input
+                  id="customer-phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="cyber-input h-9 text-sm"
@@ -194,10 +202,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="customer-email"
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
                   Email
                 </Label>
                 <Input
+                  id="customer-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -206,7 +218,10 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="customer-status"
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
                   Status
                 </Label>
                 <Select
@@ -215,7 +230,10 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                     setFormData({ ...formData, status: value as BusinessStatus })
                   }
                 >
-                  <SelectTrigger className="cyber-input h-9 text-sm">
+                  <SelectTrigger
+                    id="customer-status"
+                    className="cyber-input h-9 text-sm"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-primary/30">
@@ -230,10 +248,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             </div>
 
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <Label
+                htmlFor="customer-address"
+                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Address
               </Label>
               <Input
+                id="customer-address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="cyber-input h-9 text-sm"
@@ -241,10 +263,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             </div>
 
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <Label
+                htmlFor="customer-placeid"
+                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Place ID
               </Label>
               <Input
+                id="customer-placeid"
                 value={formData.placeId}
                 onChange={(e) => setFormData({ ...formData, placeId: e.target.value })}
                 className="cyber-input h-9 text-sm font-mono"
@@ -252,10 +278,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             </div>
 
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <Label
+                htmlFor="customer-description"
+                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+              >
                 Description
               </Label>
               <Textarea
+                id="customer-description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
