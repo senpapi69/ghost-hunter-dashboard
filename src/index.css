@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -27,26 +27,29 @@
     --accent: 180 100% 50%;
     --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 100% 63%;
     --destructive-foreground: 0 0% 100%;
 
+    --success: 152 100% 50%;
+    --success-foreground: 0 0% 0%;
+
+    --warning: 40 100% 50%;
+    --warning-foreground: 0 0% 0%;
+
     --border: 180 100% 50%;
-    --input: 0 0% 15%;
+    --input: 0 0% 12%;
     --ring: 180 100% 50%;
 
-    --radius: 0px;
+    --radius: 2px;
 
-    /* Custom Ghost Hunter tokens */
+    /* Ghost Hunter Custom Tokens */
+    --cyan: 180 100% 50%;
     --cyan-glow: 0 0 20px hsl(180 100% 50% / 0.5);
-    --cyan-glow-intense: 0 0 30px hsl(180 100% 50% / 0.7);
-    --card-border: 1px solid hsl(180 100% 50% / 0.3);
-    --card-border-active: 1px solid hsl(180 100% 50%);
+    --cyan-glow-intense: 0 0 40px hsl(180 100% 50% / 0.8);
     
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
+    --success-glow: 0 0 20px hsl(152 100% 50% / 0.5);
+    --warning-glow: 0 0 20px hsl(40 100% 50% / 0.5);
+    --error-glow: 0 0 20px hsl(0 100% 63% / 0.5);
 
     --sidebar-background: 0 0% 2%;
     --sidebar-foreground: 0 0% 100%;
@@ -61,42 +64,33 @@
   .dark {
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 180 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 7%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 180 100% 50%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 180 100% 50%;
-    --input: 0 0% 15%;
-    --ring: 180 100% 50%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border/30;
+    @apply border-border/20;
   }
 
   body {
-    @apply bg-background text-foreground font-mono;
+    @apply bg-background text-foreground;
     font-family: 'JetBrains Mono', monospace;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Outfit', sans-serif;
   }
 }
 
 @layer utilities {
+  .font-display {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
   .glow-cyan {
     box-shadow: var(--cyan-glow);
   }
@@ -105,16 +99,24 @@
     box-shadow: var(--cyan-glow-intense);
   }
 
-  .border-card {
-    border: var(--card-border);
+  .glow-success {
+    box-shadow: var(--success-glow);
   }
 
-  .border-card-active {
-    border: var(--card-border-active);
+  .glow-warning {
+    box-shadow: var(--warning-glow);
+  }
+
+  .glow-error {
+    box-shadow: var(--error-glow);
   }
 
   .text-glow {
     text-shadow: 0 0 10px hsl(180 100% 50% / 0.8);
+  }
+
+  .text-glow-success {
+    text-shadow: 0 0 10px hsl(152 100% 50% / 0.8);
   }
 
   .scanlines {
@@ -122,29 +124,30 @@
       0deg,
       transparent,
       transparent 2px,
-      hsl(180 100% 50% / 0.03) 2px,
-      hsl(180 100% 50% / 0.03) 4px
+      hsl(180 100% 50% / 0.02) 2px,
+      hsl(180 100% 50% / 0.02) 4px
     );
+    pointer-events: none;
   }
 
   .grid-pattern {
     background-image: 
-      linear-gradient(hsl(180 100% 50% / 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(180 100% 50% / 0.05) 1px, transparent 1px);
+      linear-gradient(hsl(180 100% 50% / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(180 100% 50% / 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 
   .cyber-card {
-    @apply bg-card border border-primary/30 transition-all duration-300;
+    @apply bg-card border border-primary/20 transition-all duration-300;
   }
 
   .cyber-card:hover {
-    @apply border-primary/60 glow-cyan;
+    @apply border-primary/40;
   }
 
   .cyber-button {
     @apply bg-primary text-primary-foreground font-bold uppercase tracking-wider 
-           transition-all duration-300 border-0;
+           transition-all duration-300 border-0 px-6 py-3;
   }
 
   .cyber-button:hover {
@@ -152,15 +155,46 @@
     background: hsl(180 100% 60%);
   }
 
+  .cyber-button:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    box-shadow: none;
+  }
+
   .cyber-input {
-    @apply bg-input border border-primary/30 text-foreground 
-           focus:border-primary focus:glow-cyan transition-all duration-300;
+    @apply bg-input border border-primary/20 text-foreground rounded-sm
+           focus:border-primary/60 focus:ring-1 focus:ring-primary/40 
+           transition-all duration-300 placeholder:text-muted-foreground/50;
+  }
+
+  .status-pill {
+    @apply px-2 py-0.5 text-xs font-bold uppercase tracking-wider;
+  }
+
+  .status-new {
+    @apply bg-primary/20 text-primary border border-primary/40;
+  }
+
+  .status-called {
+    @apply bg-warning/20 text-warning border border-warning/40;
+  }
+
+  .status-sold {
+    @apply bg-success/20 text-success border border-success/40;
+  }
+
+  .status-built {
+    @apply bg-purple-500/20 text-purple-400 border border-purple-500/40;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -168,25 +202,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(180 100% 50% / 0.5);
+  background: hsl(180 100% 50% / 0.3);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(180 100% 50%);
+  background: hsl(180 100% 50% / 0.6);
 }
 
-/* Loading animation */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 5px hsl(180 100% 50% / 0.5);
+    box-shadow: 0 0 5px hsl(180 100% 50% / 0.4);
   }
   50% {
-    box-shadow: 0 0 20px hsl(180 100% 50% / 0.8);
+    box-shadow: 0 0 25px hsl(180 100% 50% / 0.8);
   }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes scan {
@@ -194,10 +223,19 @@
     transform: translateY(-100%);
   }
   100% {
-    transform: translateY(100%);
+    transform: translateY(100vh);
   }
 }
 
 .animate-scan {
-  animation: scan 3s linear infinite;
+  animation: scan 8s linear infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-blink {
+  animation: blink 1s ease-in-out infinite;
 }
