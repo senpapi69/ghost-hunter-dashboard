@@ -162,7 +162,7 @@ export const useAppStore = create<AppState>()(
       setLastPaymentCount: (count) => set({ lastPaymentCount: count }),
     }),
     {
-      name: 'ghost-hunter-storage',
+      name: 'ghost-hunter-storage-v2',
       partialize: (state) => ({
         buildJobs: state.buildJobs,
         callLogs: state.callLogs,
