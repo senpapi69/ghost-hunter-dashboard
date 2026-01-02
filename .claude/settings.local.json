@@ -17,7 +17,11 @@
       "Bash(npm run lint:*)",
       "WebSearch",
       "mcp__n8n-mcp__n8n_list_workflows",
-      "mcp__n8n-mcp__n8n_workflow_versions"
+      "mcp__n8n-mcp__n8n_workflow_versions",
+      "mcp__n8n-mcp__n8n_update_full_workflow",
+      "mcp__n8n-mcp__tools_documentation",
+      "Bash(curl:*)",
+      "mcp__n8n-mcp__n8n_executions"
     ]
   },
   "enableAllProjectMcpServers": true,

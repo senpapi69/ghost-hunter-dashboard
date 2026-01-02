@@ -8,7 +8,7 @@ const N8N_EMAIL_WEBHOOK_URL =
   import.meta.env.VITE_N8N_EMAIL_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/send-email';
 
 // Demo mode - simulates successful webhook calls when real webhooks fail
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 
 export async function triggerWebsiteBuild(
   business: Business
