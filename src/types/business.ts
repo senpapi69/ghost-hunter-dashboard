@@ -26,15 +26,16 @@ export interface Package {
   id: PackageType;
   name: string;
   price: number;
+  monthlyFee: number;
   description: string;
   icon: string;
 }
 
 export const PACKAGES: Package[] = [
-  { id: 'Starter', name: 'Starter', price: 499, description: 'Single page', icon: '⚡' },
-  { id: 'Business', name: 'Business', price: 999, description: '5 pages + SEO', icon: '🚀' },
-  { id: 'Premium', name: 'Premium', price: 1999, description: 'Full site + blog', icon: '💎' },
-  { id: 'Enterprise', name: 'Enterprise', price: 4999, description: 'Custom build', icon: '🏢' },
+  { id: 'Starter', name: 'Starter', price: 100, monthlyFee: 20, description: 'Single page', icon: '⚡' },
+  { id: 'Business', name: 'Business', price: 300, monthlyFee: 30, description: '5 pages + SEO', icon: '🚀' },
+  { id: 'Premium', name: 'Premium', price: 500, monthlyFee: 40, description: 'Full site + blog', icon: '💎' },
+  { id: 'Enterprise', name: 'Enterprise', price: 800, monthlyFee: 50, description: 'Custom build', icon: '🏢' },
 ];
 
 export interface AirtableRecord {

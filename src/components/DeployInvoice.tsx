@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard } from 'lucide-react';
+import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard, Github } from 'lucide-react';
 import { Business, PACKAGES, PackageType, BuildStatus, PaymentStatus } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
-import { triggerDeployAndInvoice } from '@/lib/webhook';
+import { generateLovableBuildUrl, deployToRenderFromGitHub } from '@/lib/webhook';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,14 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isDeploying, setIsDeploying] = useState(false);
+  const [deployStage, setDeployStage] = useState<'initial' | 'lovable-ready' | 'github-ready' | 'render-deploying' | 'complete'>('initial');
+  const [githubRepoInput, setGithubRepoInput] = useState<string>('');
   const [deployResult, setDeployResult] = useState<{
-    paymentLink?: string;
+    lovableUrl?: string;
+    renderUrl?: string;
+    githubRepo?: string;
     buildStatus: BuildStatus;
     paymentStatus: PaymentStatus;
-    previewUrl?: string;
     amount: number;
     packageName: PackageType;
   } | null>(null);
@@ -45,7 +48,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
   const handleDeploy = async () => {
     if (!business || !selectedPackage) return;
-    
+
     const amount = getAmount();
     if (amount <= 0) {
       toast({
@@ -58,9 +61,9 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
     setIsDeploying(true);
     setOpen(false);
-    
+
     const jobId = `build-${Date.now()}`;
-    
+
     addBuildJob({
       id: jobId,
       businessId: business.id,
@@ -73,61 +76,62 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     });
 
     try {
-      const result = await triggerDeployAndInvoice({
-        placeId: business.placeId,
+      toast({
+        title: 'Generating Lovable Build URL',
+        description: 'AI is creating your website prompt...',
+      });
+
+      // Step 1: Generate Lovable Build URL
+      const result = await generateLovableBuildUrl({
         businessName: business.name,
         phone: business.phone,
         address: business.address,
-        email: '', // Not used - payment happens on demo site
         package: selectedPackage,
         amount,
       });
 
-      if (result.success) {
-        updateBuildJob(jobId, {
-          status: 'building',
-          previewUrl: result.previewUrl,
-        });
-        
+      if (result.success && result.lovableUrl) {
         setDeployResult({
-          paymentLink: result.paymentLink,
+          lovableUrl: result.lovableUrl,
           buildStatus: 'building',
           paymentStatus: 'pending',
-          previewUrl: result.previewUrl,
           amount,
           packageName: selectedPackage,
         });
-        
+
+        setDeployStage('lovable-ready');
+
         toast({
-          title: 'Site Deploying!',
-          description: 'Demo site with Stripe checkout is being built',
+          title: 'Lovable URL Ready! 🚀',
+          description: 'Opening Lovable in new tab. Click "Publish to GitHub" when ready.',
         });
 
-        // Simulate build completion after 3 seconds
-        setTimeout(() => {
-          updateBuildJob(jobId, { status: 'live' });
-          setDeployResult(prev => prev ? { ...prev, buildStatus: 'live' } : null);
-          incrementStat('sitesBuilt');
-        }, 3000);
-        
+        // Auto-open Lovable URL in new tab
+        window.open(result.lovableUrl, '_blank');
+
+        updateBuildJob(jobId, {
+          status: 'building',
+          previewUrl: result.lovableUrl,
+        });
+
       } else {
         updateBuildJob(jobId, {
           status: 'error',
-          errorMessage: result.error || 'Deployment failed',
+          errorMessage: result.error || 'Failed to generate Lovable URL',
         });
-        
+
         toast({
-          title: 'Deployment Failed',
+          title: 'Generation Failed',
           description: result.error || 'Something went wrong',
           variant: 'destructive',
         });
       }
-    } catch {
+    } catch (error) {
       updateBuildJob(jobId, {
         status: 'error',
         errorMessage: 'Network error',
       });
-      
+
       toast({
         title: 'Error',
         description: 'Failed to connect to deployment service',
@@ -135,6 +139,65 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
       });
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleRenderDeploy = async () => {
+    if (!business || !deployResult || !githubRepoInput) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please enter the GitHub repository URL',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setDeployStage('render-deploying');
+
+    try {
+      toast({
+        title: 'Deploying to Render',
+        description: 'This may take 2-3 minutes...',
+      });
+
+      // Step 2: Deploy to Render from GitHub
+      const result = await deployToRenderFromGitHub(
+        business.name,
+        githubRepoInput
+      );
+
+      if (result.success && result.renderUrl) {
+        setDeployResult(prev => prev ? {
+          ...prev,
+          renderUrl: result.renderUrl,
+          githubRepo: githubRepoInput,
+          buildStatus: 'live',
+        } : null);
+
+        setDeployStage('complete');
+
+        incrementStat('sitesBuilt');
+
+        toast({
+          title: 'Website Live! 🎉',
+          description: 'Your website is now deployed on Render',
+        });
+
+      } else {
+        toast({
+          title: 'Deployment Failed',
+          description: result.error || 'Failed to deploy to Render',
+          variant: 'destructive',
+        });
+        setDeployStage('github-ready');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to deploy to Render',
+        variant: 'destructive',
+      });
+      setDeployStage('github-ready');
     }
   };
 
@@ -162,14 +225,16 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     setDeployResult(null);
     setSelectedPackage(null);
     setCustomAmount('');
+    setDeployStage('initial');
+    setGithubRepoInput('');
   };
 
   return (
-    <div className="p-3">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-2 mb-3">
+    <div className="p-4">
+      <div className="flex items-center gap-2 border-b border-primary/20 pb-3 mb-4">
         <Zap className="h-4 w-4 text-primary" />
         <DollarSign className="h-4 w-4 text-primary" />
-        <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
+        <h3 className="font-display text-sm font-semibold tracking-wide text-primary">
           Deploy & Invoice
         </h3>
       </div>
@@ -201,33 +266,142 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
             </p>
           </div>
 
-          {/* Build Status */}
-          <div className="flex items-center justify-between py-2 border-b border-primary/10">
-            <span className="text-xs text-muted-foreground">Build Status:</span>
-            <span className={`text-xs font-mono ${
-              deployResult.buildStatus === 'live' ? 'text-success' :
-              deployResult.buildStatus === 'building' ? 'text-warning animate-pulse' :
-              'text-muted-foreground'
-            }`}>
-              {deployResult.buildStatus === 'live' ? '✅ Live' :
-               deployResult.buildStatus === 'building' ? '⏳ Building...' :
-               deployResult.buildStatus}
-            </span>
-          </div>
-          
-          {/* Demo URL */}
-          {deployResult.previewUrl && deployResult.buildStatus === 'live' && (
-            <div className="flex items-center justify-between py-2 border-b border-primary/10">
-              <span className="text-xs text-muted-foreground">Demo URL:</span>
-              <a 
-                href={deployResult.previewUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline flex items-center gap-1"
-              >
-                View Demo <ExternalLink className="h-3 w-3" />
-              </a>
+          {/* Deployment Stage Progress */}
+          <div className="bg-secondary/30 border border-primary/20 p-3">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className={deployStage === 'lovable-ready' || deployStage === 'github-ready' || deployStage === 'render-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+                ✓ Lovable URL
+              </span>
+              <span className={deployStage === 'github-ready' || deployStage === 'render-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+                → GitHub
+              </span>
+              <span className={deployStage === 'render-deploying' || deployStage === 'complete' ? 'text-warning animate-pulse' : deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+                → Render
+              </span>
+              <span className={deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+                ✓ Live
+              </span>
             </div>
+          </div>
+
+          {/* Step 1: Lovable URL Ready */}
+          {deployStage === 'lovable-ready' && deployResult.lovableUrl && (
+            <div className="bg-warning/10 border border-warning/30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🚀</span>
+                <h4 className="font-bold text-warning">Step 1: Build in Lovable</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Lovable has opened in a new tab. Click "Publish to GitHub" when your site is ready.
+              </p>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs border-primary/40 hover:bg-primary/10"
+                  onClick={() => window.open(deployResult.lovableUrl, '_blank')}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" /> Re-open Lovable
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full text-xs bg-success hover:bg-success/80"
+                  onClick={() => setDeployStage('github-ready')}
+                >
+                  <Check className="h-3 w-3 mr-1" /> I've Published to GitHub
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: GitHub to Render Deployment */}
+          {deployStage === 'github-ready' && (
+            <div className="bg-primary/10 border border-primary/30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Github className="h-5 w-5 text-primary" />
+                <h4 className="font-bold text-primary">Step 2: Deploy to Render</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Enter your GitHub repository URL (from Lovable):
+              </p>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={githubRepoInput}
+                  onChange={(e) => setGithubRepoInput(e.target.value)}
+                  placeholder="https://github.com/username/repo"
+                  className="cyber-input text-xs"
+                />
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full text-xs cyber-button"
+                  onClick={handleRenderDeploy}
+                  disabled={!githubRepoInput}
+                >
+                  <Zap className="h-3 w-3 mr-1" /> Deploy to Render
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Deploying to Render */}
+          {deployStage === 'render-deploying' && (
+            <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
+              <div className="flex items-center gap-2 justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-warning" />
+                <span className="font-bold text-warning">Deploying to Render...</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                This may take 2-3 minutes
+              </p>
+            </div>
+          )}
+
+          {/* Website URLs - Show when complete */}
+          {deployStage === 'complete' && (
+            <>
+              {deployResult.lovableUrl && (
+                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                  <span className="text-xs text-muted-foreground">Lovable URL:</span>
+                  <a
+                    href={deployResult.lovableUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    View on Lovable <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {deployResult.renderUrl && (
+                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                  <span className="text-xs text-muted-foreground">Live Site:</span>
+                  <a
+                    href={deployResult.renderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-success hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    View Live Site <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {deployResult.githubRepo && (
+                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                  <span className="text-xs text-muted-foreground">GitHub:</span>
+                  <a
+                    href={deployResult.githubRepo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Github className="h-3 w-3" /> View Code
+                  </a>
+                </div>
+              )}
+            </>
           )}
 
           {/* Payment Status Box */}
@@ -256,34 +430,45 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
             </p>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-2">
-            {deployResult.previewUrl && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs h-8" 
-                onClick={() => copyToClipboard(deployResult.previewUrl!)}
-              >
-                <Copy className="h-3 w-3 mr-1" /> Copy Demo Link
-              </Button>
-            )}
-            <Button variant="outline" size="sm" className="text-xs h-8">
-              <Send className="h-3 w-3 mr-1" /> Resend to Customer
-            </Button>
-          </div>
+          {/* Quick Actions - Only show when complete */}
+          {deployStage === 'complete' && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {deployResult.renderUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => copyToClipboard(deployResult.renderUrl!)}
+                  >
+                    <Copy className="h-3 w-3 mr-1" /> Copy Live Link
+                  </Button>
+                )}
+                {deployResult.githubRepo && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => window.open(deployResult.githubRepo, '_blank')}
+                  >
+                    <Github className="h-3 w-3 mr-1" /> View Code
+                  </Button>
+                )}
+              </div>
 
-          {/* Mark as Paid (for manual/cash payments) */}
-          {deployResult.paymentStatus !== 'paid' && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs h-8 border-success/40 text-success hover:bg-success/10"
-              onClick={handleMarkAsPaid}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Mark as Paid (Cash/Transfer)
-            </Button>
+              {/* Mark as Paid (for manual/cash payments) */}
+              {deployResult.paymentStatus !== 'paid' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8 border-success/40 text-success hover:bg-success/10"
+                  onClick={handleMarkAsPaid}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  Mark as Paid (Cash/Transfer)
+                </Button>
+              )}
+            </>
           )}
 
           {/* Reset Button */}
@@ -308,7 +493,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
               {business ? `DEPLOY SITE — ${business.name}` : 'DEPLOY SITE'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#0a0a0a] border-primary/50 max-w-lg glow-cyan">
+          <DialogContent className="bg-background border-primary/40 max-w-lg shadow-2xl">
             <DialogHeader>
               <DialogTitle className="font-display text-primary flex items-center gap-2 text-lg">
                 <Zap className="h-5 w-5" />
@@ -333,15 +518,16 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                       <button
                         key={pkg.id}
                         onClick={() => setSelectedPackage(pkg.id)}
-                        className={`p-4 border transition-all text-center ${
+                        className={`p-4 border transition-all text-center rounded-lg ${
                           selectedPackage === pkg.id
-                            ? 'border-primary bg-primary/10 glow-cyan'
+                            ? 'border-primary bg-primary/10 shadow-lg'
                             : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
                         }`}
                       >
                         <div className="text-2xl mb-2">{pkg.icon}</div>
                         <div className="font-display text-sm font-bold uppercase">{pkg.name}</div>
                         <div className="text-success font-mono font-bold text-lg">${pkg.price}</div>
+                        <div className="text-xs text-primary font-semibold mt-1">+${pkg.monthlyFee}/mo</div>
                         <div className="text-[11px] text-muted-foreground mt-1">{pkg.description}</div>
                       </button>
                     ))}
@@ -396,7 +582,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 </div>
 
                 <p className="text-[10px] text-muted-foreground text-center">
-                  Demo site will include Stripe checkout for customer payment
+                  AI will generate a professional website and deploy to Render (3-4 min)
                 </p>
               </div>
             )}

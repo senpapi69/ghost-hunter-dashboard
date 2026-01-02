@@ -108,10 +108,10 @@ export function QuickOutreach({ business }: QuickOutreachProps) {
   };
 
   return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-2">
+    <div className="p-4 space-y-4">
+      <div className="flex items-center gap-2 border-b border-primary/20 pb-3">
         <Send className="h-4 w-4 text-primary" />
-        <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
+        <h3 className="font-display text-sm font-semibold tracking-wide text-primary">
           Quick Outreach
         </h3>
       </div>

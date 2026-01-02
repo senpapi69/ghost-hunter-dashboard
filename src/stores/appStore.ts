@@ -40,10 +40,10 @@ const getInitialStats = (): DailyStats => ({
 });
 
 const getInitialRevenueStats = (): RevenueStats => ({
-  totalRevenue: 12450,
-  thisMonth: 4999,
-  lastMonth: 3500,
-  thisWeek: 1998,
+  totalRevenue: 0,
+  thisMonth: 0,
+  lastMonth: 0,
+  thisWeek: 0,
   today: 0,
 });
 

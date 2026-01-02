@@ -40,7 +40,7 @@
     --input: 0 0% 12%;
     --ring: 180 100% 50%;
 
-    --radius: 2px;
+    --radius: 6px;
 
     /* Ghost Hunter Custom Tokens */
     --cyan: 180 100% 50%;
@@ -124,35 +124,36 @@
       0deg,
       transparent,
       transparent 2px,
-      hsl(180 100% 50% / 0.02) 2px,
-      hsl(180 100% 50% / 0.02) 4px
+      hsl(180 100% 50% / 0.01) 2px,
+      hsl(180 100% 50% / 0.01) 4px
     );
     pointer-events: none;
   }
 
   .grid-pattern {
-    background-image: 
-      linear-gradient(hsl(180 100% 50% / 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(180 100% 50% / 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image:
+      linear-gradient(hsl(180 100% 50% / 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(180 100% 50% / 0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
   }
 
   .cyber-card {
-    @apply bg-card border border-primary/20 transition-all duration-300;
+    @apply bg-card border border-primary/20 transition-all duration-200 rounded-lg;
   }
 
   .cyber-card:hover {
-    @apply border-primary/40;
+    @apply border-primary/40 shadow-sm;
   }
 
   .cyber-button {
-    @apply bg-primary text-primary-foreground font-bold uppercase tracking-wider 
-           transition-all duration-300 border-0 px-6 py-3;
+    @apply bg-primary text-primary-foreground font-semibold uppercase tracking-wide
+           transition-all duration-200 border-0 px-6 py-3 rounded-md;
   }
 
   .cyber-button:hover {
-    @apply glow-cyan-intense;
-    background: hsl(180 100% 60%);
+    @apply shadow-lg;
+    background: hsl(180 100% 55%);
+    box-shadow: 0 0 20px hsl(180 100% 50% / 0.4);
   }
 
   .cyber-button:disabled {
@@ -161,13 +162,13 @@
   }
 
   .cyber-input {
-    @apply bg-input border border-primary/20 text-foreground rounded-sm
-           focus:border-primary/60 focus:ring-1 focus:ring-primary/40 
-           transition-all duration-300 placeholder:text-muted-foreground/50;
+    @apply bg-input border border-primary/20 text-foreground rounded-md
+           focus:border-primary/60 focus:ring-2 focus:ring-primary/20
+           transition-all duration-200 placeholder:text-muted-foreground/50;
   }
 
   .status-pill {
-    @apply px-2 py-0.5 text-xs font-bold uppercase tracking-wider;
+    @apply px-2 py-1 text-[10px] font-semibold uppercase tracking-wide rounded-md;
   }
 
   .status-new {

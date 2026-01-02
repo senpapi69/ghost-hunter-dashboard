@@ -32,21 +32,21 @@ export function DailyStats() {
   ];
 
   return (
-    <div className="border-t border-primary/20 p-3">
-      <h3 className="font-display text-xs font-bold tracking-wider text-muted-foreground mb-3">
-        TODAY'S STATS
+    <div className="border-t border-primary/20 p-4">
+      <h3 className="font-display text-sm font-semibold tracking-wide text-muted-foreground mb-3">
+        Today's Stats
       </h3>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="bg-secondary/50 border border-primary/10 p-2 text-center"
+            className="bg-secondary/50 border border-primary/10 p-3 text-center rounded-lg hover:border-primary/20 transition-colors"
           >
-            <stat.icon className={`h-4 w-4 mx-auto mb-1 ${stat.color}`} />
-            <div className={`font-mono text-xl font-bold ${stat.color}`}>
+            <stat.icon className={`h-5 w-5 mx-auto mb-2 ${stat.color}`} />
+            <div className={`font-mono text-2xl font-bold ${stat.color}`}>
               {stat.value}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
               {stat.label}
             </div>
           </div>

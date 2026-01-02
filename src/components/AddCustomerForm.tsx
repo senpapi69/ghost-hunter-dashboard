@@ -114,10 +114,10 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
   };
 
   return (
-    <div className="p-3">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-2 mb-3">
+    <div className="p-4">
+      <div className="flex items-center gap-2 border-b border-primary/20 pb-3 mb-4">
         <UserPlus className="h-4 w-4 text-primary" />
-        <h3 className="font-display text-xs font-bold tracking-wider text-primary uppercase">
+        <h3 className="font-display text-sm font-semibold tracking-wide text-primary">
           {business ? 'Update Customer' : 'Add to CRM'}
         </h3>
       </div>
@@ -141,7 +141,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-[#0a0a0a] border-primary/50 max-w-md glow-cyan">
+        <DialogContent className="bg-background border-primary/40 max-w-md shadow-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-primary flex items-center gap-2">
               {isEditMode ? <Edit className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}

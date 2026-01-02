@@ -7,6 +7,7 @@ import { DeployInvoice } from '@/components/DeployInvoice';
 import { CallLog } from '@/components/CallLog';
 import { QuickOutreach } from '@/components/QuickOutreach';
 import { AddCustomerForm } from '@/components/AddCustomerForm';
+import { EmailInvoice } from '@/components/EmailInvoice';
 import { useAppStore } from '@/stores/appStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { fetchBusinesses } from '@/lib/airtable';
@@ -33,8 +34,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen h-screen bg-background flex flex-col overflow-hidden">
-      {/* Scanline overlay */}
-      <div className="fixed inset-0 scanlines pointer-events-none z-50" />
+      {/* Scanline overlay - reduced */}
+      <div className="fixed inset-0 scanlines pointer-events-none z-50 opacity-30" />
 
       <Header />
 
@@ -80,6 +81,7 @@ const Index = () => {
               <ScrollArea className="h-full">
                 <div className="divide-y divide-primary/10">
                   <DeployInvoice business={selectedBusiness} />
+                  <EmailInvoice business={selectedBusiness} />
                   <CallLog business={selectedBusiness} />
                   <QuickOutreach business={selectedBusiness} />
                   <AddCustomerForm business={selectedBusiness} />
@@ -91,23 +93,23 @@ const Index = () => {
       </main>
 
       {/* Keyboard shortcuts hint */}
-      <footer className="h-6 border-t border-primary/20 bg-card/80 flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-        <span>
-          <kbd className="bg-muted px-1 mx-0.5">↑</kbd>
-          <kbd className="bg-muted px-1 mx-0.5">↓</kbd>
-          Navigate
+      <footer className="h-8 border-t border-primary/20 bg-card/90 backdrop-blur-sm flex items-center justify-center gap-6 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">↑</kbd>
+          <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">↓</kbd>
+          <span className="ml-1">Navigate</span>
         </span>
-        <span>
-          <kbd className="bg-muted px-1 mx-0.5">D</kbd>
-          Deploy
+        <span className="flex items-center gap-1">
+          <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">D</kbd>
+          <span className="ml-1">Deploy</span>
         </span>
-        <span>
-          <kbd className="bg-muted px-1 mx-0.5">C</kbd>
-          Call Log
+        <span className="flex items-center gap-1">
+          <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">C</kbd>
+          <span className="ml-1">Call Log</span>
         </span>
-        <span>
-          <kbd className="bg-muted px-1 mx-0.5">N</kbd>
-          New Customer
+        <span className="flex items-center gap-1">
+          <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">N</kbd>
+          <span className="ml-1">New Customer</span>
         </span>
       </footer>
     </div>

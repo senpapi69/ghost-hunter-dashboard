@@ -28,7 +28,7 @@ export async function fetchBusinesses(): Promise<Business[]> {
     }
 
     const data = await response.json();
-    return data.records.map((record: AirtableRecord) => ({
+    const businesses = data.records.map((record: AirtableRecord) => ({
       id: record.id,
       name: record.fields.Name || 'Unknown Business',
       phone: record.fields.Phone || '',
@@ -46,6 +46,20 @@ export async function fetchBusinesses(): Promise<Business[]> {
       stripePaymentId: record.fields['Stripe Payment ID'],
       paymentLink: record.fields['Payment Link'],
     }));
+
+    // Prioritize businesses with phone and address
+    return businesses.sort((a, b) => {
+      const aHasComplete = a.phone && a.address;
+      const bHasComplete = b.phone && b.address;
+
+      // Both have complete info or both don't - sort by rating
+      if (aHasComplete === bHasComplete) {
+        return b.rating - a.rating;
+      }
+
+      // Prioritize complete info
+      return aHasComplete ? -1 : 1;
+    });
   } catch (error) {
     console.error('Error fetching businesses:', error);
     return getMockBusinesses();

@@ -13,33 +13,33 @@ interface MainTabsProps {
 export function MainTabs({ business }: MainTabsProps) {
   return (
     <Tabs defaultValue="intel" className="h-full flex flex-col">
-      <TabsList className="grid w-full grid-cols-4 h-10 bg-card border-b border-primary/20 rounded-none">
+      <TabsList className="grid w-full grid-cols-4 h-11 bg-card border-b border-primary/20 rounded-none">
         <TabsTrigger
           value="intel"
-          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-xs"
+          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-sm font-medium"
         >
-          <Brain className="h-3 w-3 mr-1.5" />
+          <Brain className="h-4 w-4 mr-2" />
           Intel
         </TabsTrigger>
         <TabsTrigger
           value="map"
-          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-xs"
+          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-sm font-medium"
         >
-          <Map className="h-3 w-3 mr-1.5" />
+          <Map className="h-4 w-4 mr-2" />
           Map
         </TabsTrigger>
         <TabsTrigger
           value="queue"
-          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-xs"
+          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-sm font-medium"
         >
-          <ListOrdered className="h-3 w-3 mr-1.5" />
+          <ListOrdered className="h-4 w-4 mr-2" />
           Queue
         </TabsTrigger>
         <TabsTrigger
           value="revenue"
-          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-xs"
+          className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none text-sm font-medium"
         >
-          <DollarSign className="h-3 w-3 mr-1.5" />
+          <DollarSign className="h-4 w-4 mr-2" />
           Revenue
         </TabsTrigger>
       </TabsList>
