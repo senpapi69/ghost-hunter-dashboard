@@ -127,7 +127,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
           </div>
           <h3 className="font-display text-xl font-bold text-foreground flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-            {business.name}
+            {typeof business.name === 'string' ? business.name : String(business.name || 'Unknown')}
           </h3>
         </div>
 
@@ -156,7 +156,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
           </div>
           <div className="border border-warning/30 bg-warning/5 p-4 rounded-lg">
             <p className="text-foreground leading-relaxed text-sm">
-              {business.notes || 'No sales intelligence available.'}
+              {typeof business.notes === 'string' ? business.notes : (business.notes ? String(business.notes) : 'No sales intelligence available.')}
             </p>
           </div>
         </div>
@@ -168,7 +168,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
           </span>
           <div className="border border-primary/20 bg-muted/30 p-4 rounded-lg">
             <p className="text-muted-foreground text-sm leading-relaxed">
-              {business.description || 'No description available.'}
+              {typeof business.description === 'string' ? business.description : (business.description ? String(business.description) : 'No description available.')}
             </p>
           </div>
         </div>

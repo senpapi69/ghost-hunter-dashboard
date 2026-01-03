@@ -9,18 +9,30 @@ import { format, subDays } from 'date-fns';
 export function RevenueDashboard() {
   const { revenueStats, transactions, buildJobs } = useAppStore();
 
-  // Generate mock chart data for last 30 days
+  // Generate chart data from actual build jobs for last 30 days
   const chartData = useMemo(() => {
     const data = [];
+    const dailyRevenue: Record<string, number> = {};
+
+    // Group build jobs by date
+    buildJobs
+      .filter(job => job.paymentStatus === 'paid' && job.triggeredAt)
+      .forEach(job => {
+        const dateKey = format(new Date(job.triggeredAt), 'MMM d');
+        dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + job.amount;
+      });
+
+    // Generate data for last 30 days
     for (let i = 29; i >= 0; i--) {
       const date = subDays(new Date(), i);
+      const dateKey = format(date, 'MMM d');
       data.push({
-        date: format(date, 'MMM d'),
-        revenue: Math.floor(Math.random() * 500) + (i < 7 ? 200 : 0),
+        date: dateKey,
+        revenue: dailyRevenue[dateKey] || 0,
       });
     }
     return data;
-  }, []);
+  }, [buildJobs]);
 
   const percentChange = revenueStats.lastMonth > 0 
     ? ((revenueStats.thisMonth - revenueStats.lastMonth) / revenueStats.lastMonth * 100).toFixed(1)

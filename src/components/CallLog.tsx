@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -104,6 +105,9 @@ export function CallLog({ business }: CallLogProps) {
               <Phone className="h-4 w-4" />
               Log Call
             </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Record the outcome and notes from your call
+            </DialogDescription>
           </DialogHeader>
           
           {business && (

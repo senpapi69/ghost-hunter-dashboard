@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -78,7 +79,8 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     try {
       toast({
         title: 'Generating Lovable Build URL',
-        description: 'AI is creating your website prompt...',
+        description: 'AI is creating your website prompt... This may take 30-60 seconds.',
+        duration: 5000,
       });
 
       // Step 1: Generate Lovable Build URL
@@ -86,6 +88,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
         businessName: business.name,
         phone: business.phone,
         address: business.address,
+        email: business.email,
+        description: business.description,
+        notes: business.notes,
+        rating: business.rating,
         package: selectedPackage,
         amount,
       });
@@ -499,6 +505,9 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 <Zap className="h-5 w-5" />
                 Deploy Site
               </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm">
+                Select a package and deploy a professional website for your customer
+              </DialogDescription>
             </DialogHeader>
             
             {business && (

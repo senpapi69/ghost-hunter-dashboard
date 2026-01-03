@@ -92,7 +92,7 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
                       <Star className="h-3.5 w-3.5 fill-primary text-primary flex-shrink-0" />
                     )}
                     <span className="font-semibold text-sm text-foreground truncate">
-                      {business.name}
+                      {typeof business.name === 'string' ? business.name : String(business.name || 'Unknown')}
                     </span>
                   </div>
                   <StatusPill status={business.status} />
@@ -100,13 +100,13 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
 
                 <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                   <Phone className="h-3.5 w-3.5" />
-                  <span className="font-mono text-xs">{business.phone}</span>
+                  <span className="font-mono text-xs">{typeof business.phone === 'string' ? business.phone : String(business.phone || '')}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-start gap-2 text-muted-foreground flex-1 min-w-0">
                     <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span className="text-xs truncate">{business.address}</span>
+                    <span className="text-xs truncate">{typeof business.address === 'string' ? business.address : String(business.address || '')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-primary">{business.rating}</span>

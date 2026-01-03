@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -147,6 +148,9 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
               {isEditMode ? <Edit className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
               {isEditMode ? 'Update Customer' : 'Add New Customer'}
             </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              {isEditMode ? 'Update customer information in your CRM' : 'Add a new business lead to your CRM'}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Editing indicator */}

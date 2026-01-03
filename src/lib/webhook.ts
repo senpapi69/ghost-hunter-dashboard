@@ -164,6 +164,10 @@ export interface LovableDeployPayload {
   businessName: string;
   address: string;
   phone: string;
+  email?: string;
+  description?: string;
+  notes?: string;
+  rating?: number;
   package: string;
   amount: number;
 }
@@ -247,7 +251,7 @@ export async function generateLovableBuildUrl(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds for Lovable API
 
     const response = await fetch(N8N_LOVABLE_DEPLOY_WEBHOOK_URL, {
       method: 'POST',
@@ -258,6 +262,10 @@ export async function generateLovableBuildUrl(
         businessName: payload.businessName,
         address: payload.address,
         phone: payload.phone,
+        email: payload.email,
+        description: payload.description,
+        notes: payload.notes,
+        rating: payload.rating,
         package: payload.package,
         amount: payload.amount,
         timestamp: new Date().toISOString(),
