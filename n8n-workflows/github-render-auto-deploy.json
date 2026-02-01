@@ -1,0 +1,395 @@
+{
+  "name": "GitHub to Render Auto-Deploy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-render-deploy",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-github",
+      "name": "GitHub Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "webhookId": "github-render-deploy"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse GitHub webhook data\nconst webhookData = $input.all()[0].json;\nconst headers = webhookData.headers || {};\nconst body = webhookData.body || {};\n\nconst event = headers['x-github-event'] || '';\nconst action = body.action || '';\nconst repository = body.repository || {};\nconst ref = body.ref || '';\nconst pusher = body.pusher || {};\n\n// Check if this is a push to main branch\nconst isMainPush = event === 'push' && (ref === 'refs/heads/main' || ref === 'refs/heads/master');\n\n// Extract business name from repo name (format: business-name-package-tier)\nconst repoName = repository.name || '';\nconst businessNameMatch = repoName.match(/^(.+)-(starter|business|premium|enterprise|custom)$/);\nconst businessName = businessNameMatch ? businessNameMatch[1].replace(/-/g, ' ') : repoName;\n\nreturn [{\n  json: {\n    event: event,\n    action: action,\n    isMainPush: isMainPush,\n    shouldDeploy: isMainPush,\n    repoName: repository.name || '',\n    repoFullName: repository.full_name || '',\n    repoUrl: repository.clone_url || '',\n    repoSSHUrl: repository.ssh_url || '',\n    repoDefaultBranch: repository.default_branch || 'main',\n    repoOwner: repository.owner?.login || '',\n    repoPrivate: repository.private || false,\n    businessName: businessName,\n    pusherName: pusher.name || '',\n    commitId: body.after || '',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-github",
+      "name": "Parse GitHub Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-should-deploy",
+              "leftValue": "={{ $json.shouldDeploy }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-deploy",
+      "name": "Should Deploy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.render.com/v1/services",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"type\": \"web_service\",\n  \"name\": \"{{ $json.repoName }}\",\n  \"ownerId\": \"tea-d57vla3e5dus73dkar5g\",\n  \"repo\": \"{{ $json.repoUrl }}\",\n  \"branch\": \"{{ $json.repoDefaultBranch }}\",\n  \"autoDeploy\": \"yes\",\n  \"serviceDetails\": {\n    \"env\": \"docker\",\n    \"region\": \"oregon\",\n    \"plan\": \"starter\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "create-render",
+      "name": "Create Render Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Initialize polling variables\nconst renderResponse = $input.all()[0].json;\nconst githubData = $('Parse GitHub Event').first().json;\n\nreturn [{\n  json: {\n    serviceId: renderResponse.service?.id || renderResponse.id || '',\n    serviceName: renderResponse.service?.name || renderResponse.name || '',\n    serviceUrl: renderResponse.service?.serviceDetails?.url || '',\n    repoName: githubData.repoName,\n    repoUrl: githubData.repoUrl,\n    businessName: githubData.businessName,\n    pollCount: 0,\n    maxPolls: 20,\n    pollInterval: 30000, // 30 seconds\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "init-polling",
+      "name": "Initialize Polling",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-30s",
+      "name": "Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.render.com/v1/services/{{ $json.serviceId }}",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "check-status",
+      "name": "Check Deployment Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check deployment status and determine next action\nconst statusData = $input.all()[0].json;\nconst pollData = $('Initialize Polling').first().json;\n\nconst deploymentStatus = statusData.service?.currentDeployment?.status || 'created';\nconst isLive = deploymentStatus === 'live';\nconst isFailed = deploymentStatus === 'failed' || deploymentStatus === 'build_failed';\nconst pollCount = (pollData.pollCount || 0) + 1;\nconst shouldContinue = pollCount < pollData.maxPolls && !isLive && !isFailed;\n\nreturn [{\n  json: {\n    ...pollData,\n    deploymentStatus: deploymentStatus,\n    isLive: isLive,\n    isFailed: isFailed,\n    shouldContinue: shouldContinue,\n    pollCount: pollCount,\n    serviceUrl: statusData.service?.serviceDetails?.url || pollData.serviceUrl,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "evaluate-status",
+      "name": "Evaluate Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-continue",
+              "leftValue": "={{ $json.shouldContinue }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "should-poll",
+      "name": "Continue Polling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1850, 200]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Send webhook to dashboard with deployment status\nconst data = $input.all()[0].json;\nconst webhookUrl = 'https://YOUR-DOMAIN.com/api/webhooks/deployment-status'; // UPDATE THIS\nconst webhookSecret = 'YOUR_WEBHOOK_SECRET'; // UPDATE THIS\n\n// Prepare webhook payload\nconst webhookPayload = {\n  businessId: data.businessName.replace(/\\s+/g, '-').toLowerCase(), // Use business name as ID\n  status: data.isLive ? 'live' : (data.isFailed ? 'failed' : 'deploying'),\n  renderUrl: data.serviceUrl || '',\n  error: data.isFailed ? 'Deployment failed on Render' : undefined,\n  timestamp: new Date().toISOString()\n};\n\n// Send webhook (using n8n HTTP Request node)\nreturn [{\n  json: {\n    ...data,\n    webhookPayload: webhookPayload,\n    webhookUrl: webhookUrl,\n    webhookSent: true,\n    finalStatus: data.isLive ? 'live' : (data.isFailed ? 'failed' : 'timeout')\n  }\n}];"
+      },
+      "id": "prepare-webhook",
+      "name": "Prepare Dashboard Webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.webhookUrl }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "YOUR_WEBHOOK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{ $json.webhookPayload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "send-webhook",
+      "name": "Send Dashboard Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2250, 100]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Format final response\nconst data = $input.all()[0].json;\nconst githubData = $('Parse GitHub Event').first().json;\n\nreturn [{\n  json: {\n    success: data.isLive,\n    message: data.isLive \n      ? `Successfully deployed ${data.repoName} to Render`\n      : (data.isFailed ? `Deployment failed for ${data.repoName}` : `Deployment timeout for ${data.repoName}`),\n    serviceName: data.serviceName,\n    serviceId: data.serviceId,\n    serviceUrl: data.serviceUrl,\n    renderUrl: data.serviceUrl,\n    repoName: data.repoName,\n    repoUrl: data.repoUrl,\n    businessName: data.businessName,\n    deploymentStatus: data.finalStatus,\n    webhookSent: data.webhookSent,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-final-response",
+      "name": "Format Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 100]
+    },
+    {
+      "parameters": {},
+      "id": "skip-event",
+      "name": "Skip Event",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "GitHub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse GitHub Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse GitHub Event": {
+      "main": [
+        [
+          {
+            "node": "Should Deploy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Deploy?": {
+      "main": [
+        [
+          {
+            "node": "Create Render Service",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Render Service": {
+      "main": [
+        [
+          {
+            "node": "Initialize Polling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Polling": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Check Deployment Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Deployment Status": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Status": {
+      "main": [
+        [
+          {
+            "node": "Continue Polling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Polling?": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Dashboard Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Dashboard Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Dashboard Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Dashboard Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}

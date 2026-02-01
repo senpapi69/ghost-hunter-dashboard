@@ -16,6 +16,11 @@ export interface Business {
   stripePaymentId?: string;
   paymentLink?: string;
   paidAt?: Date;
+  // New deployment fields
+  githubRepo?: string;
+  renderServiceId?: string;
+  renderDeploymentUrl?: string;
+  deploymentStatus?: 'pending' | 'deploying' | 'live' | 'failed';
 }
 
 export type BusinessStatus = 'New Lead' | 'Called' | 'Invoice Sent' | 'Paid' | 'Built';
@@ -57,10 +62,15 @@ export interface AirtableRecord {
     'Stripe Payment ID'?: string;
     'Payment Link'?: string;
     'Paid At'?: string;
+    // New deployment fields
+    'GitHub Repo'?: string;
+    'Render Service ID'?: string;
+    'Render Deployment URL'?: string;
+    'Deployment Status'?: string;
   };
 }
 
-export type BuildStatus = 'queued' | 'building' | 'live' | 'error';
+export type BuildStatus = 'queued' | 'building' | 'github-creating' | 'render-provisioning' | 'auto-deploying' | 'live' | 'error';
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
 
 export interface BuildJob {
@@ -75,6 +85,11 @@ export interface BuildJob {
   previewUrl?: string;
   stripePaymentId?: string;
   errorMessage?: string;
+  // New deployment metadata fields
+  githubRepo?: string;
+  renderServiceId?: string;
+  renderDeploymentUrl?: string;
+  deploymentStatus?: 'pending' | 'deploying' | 'live' | 'failed';
 }
 
 export type CallOutcome = 'Answered' | 'No Answer' | 'Callback' | 'Not Interested' | 'Interested';

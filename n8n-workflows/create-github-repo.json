@@ -1,0 +1,271 @@
+{
+  "name": "Create GitHub Repository",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-github-repo",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-create-repo",
+      "name": "Webhook: Create GitHub Repo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "webhookId": "create-github-repo"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse webhook payload and generate repository name\nconst payload = $input.all()[0].json;\n\nconst businessName = payload.businessName || '';\nconst packageTier = payload.packageTier || 'starter';\n\n// Generate repository name using slug pattern\nconst slug = businessName\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/(^-|-$)/g, '');\n\nconst repoName = `${slug}-${packageTier.toLowerCase()}`;\nconst githubOwner = 'senpapi69';\n\nreturn [{\n  json: {\n    businessName,\n    packageTier,\n    repoName,\n    githubOwner,\n    repoFullName: `${githubOwner}/${repoName}`,\n    repoUrl: `https://github.com/${githubOwner}/${repoName}`,\n    timestamp: payload.timestamp || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-payload",
+      "name": "Parse Payload & Generate Repo Name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.githubOwner }}/{{ $json.repoName }}",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "check-repo-exists",
+      "name": "Check if Repo Exists",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [650, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-repo-status",
+              "leftValue": "={{ $node['Check if Repo Exists'].json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-repo-exists",
+      "name": "Repo Already Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Append timestamp to handle naming conflicts\nconst data = $node['Parse Payload & Generate Repo Name'].json;\nconst timestamp = Date.now();\nconst newRepoName = `${data.repoName}-${timestamp}`;\n\nreturn [{\n  json: {\n    ...data,\n    repoName: newRepoName,\n    repoFullName: `${data.githubOwner}/${newRepoName}`,\n    repoUrl: `https://github.com/${data.githubOwner}/${newRepoName}`,\n    timestampConflict: timestamp\n  }\n}];"
+      },
+      "id": "handle-conflict",
+      "name": "Handle Naming Conflict",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/user/repos",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.repoName }}\",\n  \"description\": \"Website for {{ $json.businessName }} ({{ $json.packageTier }} package)\",\n  \"private\": false,\n  \"auto_init\": true,\n  \"gitignore_template\": \"Node\",\n  \"license_template\": \"mit\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "create-repo",
+      "name": "Create GitHub Repository",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.githubOwner }}/{{ $json.repoName }}/hooks",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"name\": \"n8n-webhook\",\n  \"active\": true,\n  \"events\": [\"push\"],\n  \"config\": {\n    \"url\": \"https://n8n.hudsond.me/webhook/github-render-deploy\",\n    \"content_type\": \"json\",\n    \"insecure_ssl\": \"0\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "create-webhook",
+      "name": "Configure GitHub Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Format success response\nconst repoData = $node['Create GitHub Repository'].json;\nconst webhookData = $node['Configure GitHub Webhook'].json;\nconst payload = $node['Parse Payload & Generate Repo Name'].json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `GitHub repository created: ${repoData.full_name}`,\n    githubRepo: repoData.html_url,\n    repoName: repoData.name,\n    webhookUrl: 'https://n8n.hudsond.me/webhook/github-render-deploy',\n    businessName: payload.businessName,\n    packageTier: payload.packageTier,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-response",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Create GitHub Repo": {
+      "main": [
+        [
+          {
+            "node": "Parse Payload & Generate Repo Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Payload & Generate Repo Name": {
+      "main": [
+        [
+          {
+            "node": "Check if Repo Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Repo Exists": {
+      "main": [
+        [
+          {
+            "node": "Repo Already Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repo Already Exists?": {
+      "main": [
+        [
+          {
+            "node": "Handle Naming Conflict",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create GitHub Repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Naming Conflict": {
+      "main": [
+        [
+          {
+            "node": "Create GitHub Repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GitHub Repository": {
+      "main": [
+        [
+          {
+            "node": "Configure GitHub Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure GitHub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}

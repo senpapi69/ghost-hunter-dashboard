@@ -1,4 +1,5 @@
 import { Business } from '@/types/business';
+import { GitHubCreatePayload, GitHubCreateResponse } from '@/types/webhooks';
 
 const N8N_WEBHOOK_URL =
   import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/build-site';
@@ -47,7 +48,7 @@ export async function triggerWebsiteBuild(
     return { success: true, demoUrl };
   } catch (error) {
     console.error('Webhook failed:', error);
-    
+
     // In demo mode, simulate success after webhook failure
     if (DEMO_MODE) {
       console.log('Demo mode: Simulating successful build');
@@ -55,7 +56,7 @@ export async function triggerWebsiteBuild(
       await new Promise(resolve => setTimeout(resolve, 2000));
       return { success: true, demoUrl, isDemo: true };
     }
-    
+
     return { success: false };
   }
 }
@@ -360,6 +361,75 @@ export async function deployToRenderFromGitHub(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Deployment failed'
+    };
+  }
+}
+
+/**
+ * Step 3 (NEW): Create GitHub repository and configure webhook
+ * Part of automated deployment flow
+ * Calls n8n webhook which creates repo via GitHub API and configures webhook
+ */
+export async function createGitHubRepoAndWebhook(
+  businessName: string,
+  packageTier: string
+): Promise<GitHubCreateResponse> {
+  const N8N_GITHUB_CREATE_URL =
+    import.meta.env.VITE_N8N_GITHUB_CREATE_URL || 'https://n8n.hudsond.me/webhook/create-github-repo';
+
+  // Generate repository name using existing slug pattern
+  const repoName = `${businessName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')}-${packageTier.toLowerCase()}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds for GitHub API
+
+    const response = await fetch(N8N_GITHUB_CREATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        businessName,
+        packageTier,
+        timestamp: new Date().toISOString(),
+      } as GitHubCreatePayload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Webhook returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: data.success,
+      githubRepo: data.githubRepo,
+      repoName: data.repoName,
+      webhookUrl: data.webhookUrl,
+    };
+  } catch (error) {
+    console.error('GitHub repo creation failed:', error);
+
+    if (DEMO_MODE) {
+      console.log('Demo mode: Simulating GitHub repo creation');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return {
+        success: true,
+        githubRepo: `https://github.com/senpapi69/${repoName}`,
+        repoName,
+        webhookUrl: 'https://n8n.hudsond.me/webhook/github-render-deploy',
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create GitHub repository',
     };
   }
 }

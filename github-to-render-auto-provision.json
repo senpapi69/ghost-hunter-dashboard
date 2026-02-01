@@ -1,0 +1,172 @@
+{
+  "name": "GitHub to Render Auto-Provision Service",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-render-provision",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-github",
+      "name": "GitHub Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "webhookId": "github-render-provision"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse GitHub webhook data\nconst webhookData = $input.all()[0].json;\nconst headers = webhookData.headers || {};\nconst body = webhookData.body || {};\n\nconst event = headers['x-github-event'] || '';\nconst action = body.action || '';\nconst repository = body.repository || {};\n\n// Check if this is a new repository or first push\nconst isNewRepo = event === 'repository' && action === 'created';\nconst isFirstPush = event === 'push' && body.created === true;\n\nreturn [{\n  json: {\n    event: event,\n    action: action,\n    isNewRepo: isNewRepo,\n    isFirstPush: isFirstPush,\n    shouldCreateService: isNewRepo || isFirstPush,\n    repoName: repository.name || '',\n    repoFullName: repository.full_name || '',\n    repoUrl: repository.clone_url || '',\n    repoSSHUrl: repository.ssh_url || '',\n    repoDefaultBranch: repository.default_branch || 'main',\n    repoOwner: repository.owner?.login || '',\n    repoPrivate: repository.private || false,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-github",
+      "name": "Parse GitHub Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-should-create",
+              "leftValue": "={{ $json.shouldCreateService }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-create",
+      "name": "Should Create Service?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.render.com/v1/services",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"type\": \"web_service\",\n  \"name\": \"{{ $json.repoName }}\",\n  \"ownerId\": \"usr-d57vla3e5dus73dkar80\",\n  \"repo\": \"{{ $json.repoUrl }}\",\n  \"branch\": \"{{ $json.repoDefaultBranch }}\",\n  \"autoDeploy\": \"yes\",\n  \"serviceDetails\": {\n    \"env\": \"docker\",\n    \"region\": \"oregon\",\n    \"plan\": \"starter\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "create-render",
+      "name": "Create Render Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Format success response\nconst renderResponse = $input.all()[0].json;\nconst githubData = $('Parse GitHub Event').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Successfully created Render service for ${githubData.repoName}`,\n    serviceName: renderResponse.service?.name || renderResponse.name || '',\n    serviceUrl: renderResponse.service?.serviceDetails?.url || 'Deployment in progress',\n    serviceId: renderResponse.service?.id || renderResponse.id || '',\n    deploymentStatus: 'pending',\n    repository: githubData.repoFullName,\n    branch: githubData.repoDefaultBranch,\n    autoDeploy: 'yes',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-success",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {},
+      "id": "skip-event",
+      "name": "Skip Event",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "GitHub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse GitHub Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse GitHub Event": {
+      "main": [
+        [
+          {
+            "node": "Should Create Service?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Create Service?": {
+      "main": [
+        [
+          {
+            "node": "Create Render Service",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Render Service": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}
