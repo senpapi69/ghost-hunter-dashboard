@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard, Github, AlertCircle } from 'lucide-react';
 import { Business, PACKAGES, PackageType, BuildStatus, PaymentStatus } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
-import { generateLovableBuildUrl, deployToRenderFromGitHub, createGitHubRepoAndWebhook } from '@/lib/webhook';
+import { generateLovableBuildUrl, deployToRenderFromGitHub } from '@/lib/webhook';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,8 @@ interface DeployInvoiceProps {
 type DeployStage =
   | 'initial'
   | 'lovable-ready'
-  | 'github-creating'
   | 'github-ready'
+  | 'render-deploying'
   | 'render-provisioning'
   | 'auto-deploying'
   | 'complete';
@@ -205,84 +205,66 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
       businessName: business.name,
       package: selectedPackage,
       amount,
-      status: 'github-creating',
+      status: 'queued',
       paymentStatus: 'pending',
       triggeredAt: new Date(),
     });
 
     try {
-      // Step 1: Create GitHub repository and configure webhook
-      setDeployStage('github-creating');
+      // Call deploy-website webhook directly
+      setDeployStage('render-provisioning');
 
       toast({
-        title: 'Creating GitHub Repository',
-        description: 'Setting up your GitHub repository... This may take 30-60 seconds.',
+        title: 'Deploying Website',
+        description: 'Calling n8n webhook to deploy your site... This may take 30-60 seconds.',
         duration: 5000,
       });
 
-      const githubResult = await createGitHubRepoAndWebhook(
-        business.name,
-        selectedPackage
-      );
+      const lovableResult = await generateLovableBuildUrl({
+        businessName: business.name,
+        phone: business.phone,
+        address: business.address,
+        email: business.email,
+        description: business.description,
+        notes: business.notes,
+        rating: business.rating,
+        package: selectedPackage,
+        amount,
+      });
 
-      if (githubResult.success && githubResult.githubRepo) {
+      if (lovableResult.success && lovableResult.lovableUrl) {
         updateBuildJob(jobId, {
-          status: 'render-provisioning',
-          githubRepo: githubResult.githubRepo,
+          status: 'building',
+          previewUrl: lovableResult.lovableUrl,
         });
 
-        setDeployStage('render-provisioning');
         setDeployResult({
-          lovableUrl: '', // Will be generated after GitHub repo is ready
-          githubRepo: githubResult.githubRepo,
-          buildStatus: 'render-provisioning',
+          lovableUrl: lovableResult.lovableUrl,
+          buildStatus: 'building',
           paymentStatus: 'pending',
           amount,
           packageName: selectedPackage,
         });
 
+        setDeployStage('lovable-ready');
+
         toast({
-          title: 'GitHub Repository Created ✓',
-          description: 'Repository is ready. Opening Lovable to build your site...',
+          title: 'Lovable URL Ready! 🚀',
+          description: 'Opening Lovable in new tab. Click "Publish to GitHub" when ready.',
         });
 
-        // Auto-open Lovable with the GitHub repo
-        // Note: Lovable API research (Task Group 9) will determine if we can automate the publish step
-        const lovableResult = await generateLovableBuildUrl({
-          businessName: business.name,
-          phone: business.phone,
-          address: business.address,
-          email: business.email,
-          description: business.description,
-          notes: business.notes,
-          rating: business.rating,
-          package: selectedPackage,
-          amount,
-        });
-
-        if (lovableResult.success && lovableResult.lovableUrl) {
-          setDeployResult(prev => prev ? {
-            ...prev,
-            lovableUrl: lovableResult.lovableUrl,
-          } : null);
-
-          setDeployStage('lovable-ready');
-          window.open(lovableResult.lovableUrl, '_blank');
-        }
-
-        // After user publishes to GitHub, webhook will trigger Render deployment
-        // Status updates will come via webhook (Task Group 4)
+        window.open(lovableResult.lovableUrl, '_blank');
         setDeployStage('auto-deploying');
 
       } else {
         updateBuildJob(jobId, {
           status: 'error',
-          errorMessage: githubResult.error || 'Failed to create GitHub repository',
+          errorMessage: lovableResult.error || 'Failed to generate Lovable URL',
         });
 
         toast({
-          title: 'GitHub Creation Failed',
-          description: githubResult.error || 'Something went wrong',
+          title: 'Deployment Failed',
+          description: lovableResult.error || 'Something went wrong',
           variant: 'destructive',
         });
         setDeployStage('initial');
@@ -290,12 +272,12 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     } catch (error) {
       updateBuildJob(jobId, {
         status: 'error',
-        errorMessage: 'Network error during GitHub setup',
+        errorMessage: 'Network error during deployment',
       });
 
       toast({
         title: 'Error',
-        description: 'Failed to set up GitHub repository',
+        description: 'Failed to connect to deployment service',
         variant: 'destructive',
       });
       setDeployStage('initial');
@@ -410,10 +392,9 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
               <span className="font-bold text-foreground">{business.name}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {deployStage === 'github-creating' && 'Creating GitHub repository...'}
-              {deployStage === 'render-provisioning' && 'Provisioning Render service...'}
+              {deployStage === 'render-provisioning' && 'Initializing deployment...'}
               {deployStage === 'auto-deploying' && 'Deploying to Render...'}
-              {!['github-creating', 'render-provisioning', 'auto-deploying'].includes(deployStage) && 'Initializing deployment...'}
+              {!['render-provisioning', 'auto-deploying'].includes(deployStage) && 'Initializing deployment...'}
             </p>
           </div>
         </div>
@@ -436,8 +417,8 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           {/* Deployment Stage Progress */}
           <div className="bg-secondary/30 border border-primary/20 p-3">
             <div className="flex items-center justify-between text-xs mb-2">
-              <span className={deployStage === 'lovable-ready' || deployStage === 'github-creating' || deployStage === 'github-ready' || deployStage === 'render-provisioning' || deployStage === 'auto-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
-                {deployStage === 'github-creating' ? '→ Creating' : '✓'} GitHub
+              <span className={deployStage === 'lovable-ready' || deployStage === 'render-provisioning' || deployStage === 'auto-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+                ✓ Lovable
               </span>
               <span className={deployStage === 'render-provisioning' || deployStage === 'auto-deploying' || deployStage === 'complete' ? 'text-warning animate-pulse' : deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
                 {deployStage === 'render-provisioning' ? '→ Provisioning' : deployStage === 'auto-deploying' ? '→ Deploying' : '→'} Render
@@ -447,19 +428,6 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
               </span>
             </div>
           </div>
-
-          {/* GitHub Creating Stage */}
-          {deployStage === 'github-creating' && (
-            <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
-              <div className="flex items-center gap-2 justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-warning" />
-                <span className="font-bold text-warning">Creating GitHub Repository...</span>
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                This may take 30-60 seconds
-              </p>
-            </div>
-          )}
 
           {/* Render Provisioning Stage */}
           {deployStage === 'render-provisioning' && (

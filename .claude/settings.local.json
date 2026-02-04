@@ -44,7 +44,8 @@
       "Bash(git fetch:*)",
       "Bash(git checkout:*)",
       "Bash(GIT_CONFIG_PARAMETERS=\"''credential.helper=''''\" git commit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "mcp__web-reader__webReader"
     ]
   },
   "enableAllProjectMcpServers": true,
