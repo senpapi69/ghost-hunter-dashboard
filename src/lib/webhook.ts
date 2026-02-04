@@ -165,11 +165,6 @@ export async function sendEmail(
   }
 }
 
-// n8n REST API Configuration
-const N8N_API_BASE_URL =
-  import.meta.env.VITE_N8N_API_BASE_URL || 'https://n8n-cors-handler.bigbbghud.workers.dev';
-const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY || '';
-
 // n8n Workflow IDs (configure these in n8n)
 const N8N_LOVABLE_DEPLOY_WORKFLOW_ID =
   import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WORKFLOW_ID || '';
