@@ -1,6 +1,12 @@
 import { Business } from '@/types/business';
 import { GitHubCreatePayload, GitHubCreateResponse } from '@/types/webhooks';
 
+// n8n REST API Configuration
+const N8N_API_BASE_URL =
+  import.meta.env.VITE_N8N_API_BASE_URL || 'https://n8n-cors-handler.bigbbghud.workers.dev';
+const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY || '';
+
+// Legacy webhook URLs (for fallback)
 const N8N_WEBHOOK_URL =
   import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/build-site';
 const N8N_SMS_WEBHOOK_URL =
@@ -10,6 +16,29 @@ const N8N_EMAIL_WEBHOOK_URL =
 
 // Demo mode - simulates successful webhook calls when real webhooks fail
 const DEMO_MODE = false;
+
+/**
+ * Helper function to call n8n REST API
+ */
+async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any): Promise<Response> {
+  const url = `${N8N_API_BASE_URL}/api/v1${endpoint}`;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (N8N_API_KEY) {
+    headers['X-N8N-API-KEY'] = N8N_API_KEY;
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+  });
+
+  return response;
+}
 
 export async function triggerWebsiteBuild(
   business: Business
@@ -136,9 +165,18 @@ export async function sendEmail(
   }
 }
 
+// n8n REST API Configuration
+const N8N_API_BASE_URL =
+  import.meta.env.VITE_N8N_API_BASE_URL || 'https://n8n-cors-handler.bigbbghud.workers.dev';
+const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY || '';
+
+// n8n Workflow IDs (configure these in n8n)
+const N8N_LOVABLE_DEPLOY_WORKFLOW_ID =
+  import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WORKFLOW_ID || '';
+
+// Legacy webhook URLs (for fallback)
 const N8N_DEPLOY_WEBHOOK_URL =
   import.meta.env.VITE_N8N_DEPLOY_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/deploy-and-invoice';
-
 const N8N_LOVABLE_DEPLOY_WEBHOOK_URL =
   import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/deploy-website';
 
@@ -239,7 +277,7 @@ export async function triggerDeployAndInvoice(
 }
 
 /**
- * Step 1: Generate Lovable Build URL
+ * Step 1: Generate Lovable Build URL using n8n REST API
  * Returns a URL that auto-starts Lovable AI website builder
  */
 export async function generateLovableBuildUrl(
@@ -254,12 +292,12 @@ export async function generateLovableBuildUrl(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds for Lovable API
 
-    const response = await fetch(N8N_LOVABLE_DEPLOY_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    let response: Response;
+
+    // Use REST API if workflow ID is configured, otherwise fall back to webhook
+    if (N8N_LOVABLE_DEPLOY_WORKFLOW_ID && N8N_API_KEY) {
+      // Use n8n REST API to trigger workflow
+      response = await callN8nAPI(`/workflows/${N8N_LOVABLE_DEPLOY_WORKFLOW_ID}/execute`, 'POST', {
         businessName: payload.businessName,
         address: payload.address,
         phone: payload.phone,
@@ -270,21 +308,44 @@ export async function generateLovableBuildUrl(
         package: payload.package,
         amount: payload.amount,
         timestamp: new Date().toISOString(),
-      }),
-      signal: controller.signal,
-    });
+      });
+    } else {
+      // Fall back to webhook (through Worker for CORS)
+      const webhookUrl = `${N8N_API_BASE_URL}/webhook/deploy-website`;
+      response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessName: payload.businessName,
+          address: payload.address,
+          phone: payload.phone,
+          email: payload.email,
+          description: payload.description,
+          notes: payload.notes,
+          rating: payload.rating,
+          package: payload.package,
+          amount: payload.amount,
+          timestamp: new Date().toISOString(),
+        }),
+        signal: controller.signal,
+      });
+    }
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Webhook returned ${response.status}`);
+      throw new Error(`API returned ${response.status}`);
     }
 
     const data = await response.json();
     return {
-      success: data.success,
-      lovableUrl: data.lovableBuildUrl,
-      buildStatus: 'pending',
+      success: data.success ?? true,
+      lovableUrl: data.lovableBuildUrl || data.lovableUrl,
+      renderUrl: data.renderUrl,
+      githubRepo: data.githubRepo,
+      buildStatus: data.buildStatus || 'pending',
     };
   } catch (error) {
     console.error('Lovable URL generation failed:', error);
