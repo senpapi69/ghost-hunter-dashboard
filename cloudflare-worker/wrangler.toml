@@ -1,0 +1,21 @@
+# Cloudflare Worker Configuration
+# Run: npx wrangler deploy
+# Or: npm run deploy:worker
+
+name = "n8n-cors-handler"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+# Environment variables (secrets should be set via: npx wrangler secret put N8N_API_KEY)
+# For non-secret vars, you can add them here or in the [vars] section
+
+# For development:
+# [env.development]
+# vars = { N8N_API_BASE_URL = "https://n8n.hudsond.me" }
+
+# Secrets to set (use wrangler secret put command):
+# - N8N_API_KEY: Your n8n API key (get from n8n Settings > API > Create API Key)
+# - N8N_API_BASE_URL: Your n8n instance URL (or set as var below)
+
+# Optional: Allowlist of origins (comma-separated)
+# vars = { ALLOWED_ORIGINS = "http://localhost:5173,https://your-dashboard-domain.com" }

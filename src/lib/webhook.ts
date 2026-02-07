@@ -18,7 +18,11 @@ const N8N_EMAIL_WEBHOOK_URL =
 const DEMO_MODE = false;
 
 /**
- * Helper function to call n8n REST API
+ * Helper function to call n8n REST API through Cloudflare Worker
+ *
+ * Note: API key is NOT sent from client. The Cloudflare Worker adds the
+ * N8N_API_KEY from its environment variables when forwarding to n8n.
+ * This keeps the API key secure on the server-side.
  */
 async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any): Promise<Response> {
   const url = `${N8N_API_BASE_URL}/api/v1${endpoint}`;
@@ -27,9 +31,8 @@ async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any)
     'Content-Type': 'application/json',
   };
 
-  if (N8N_API_KEY) {
-    headers['X-N8N-API-KEY'] = N8N_API_KEY;
-  }
+  // API key is added by the Cloudflare Worker, not the client
+  // This keeps credentials secure on the server side
 
   const response = await fetch(url, {
     method,
@@ -289,9 +292,10 @@ export async function generateLovableBuildUrl(
 
     let response: Response;
 
-    // Use REST API if workflow ID is configured, otherwise fall back to webhook
-    if (N8N_LOVABLE_DEPLOY_WORKFLOW_ID && N8N_API_KEY) {
-      // Use n8n REST API to trigger workflow
+    // Use REST API if workflow ID is configured (Worker handles API key)
+    if (N8N_LOVABLE_DEPLOY_WORKFLOW_ID) {
+      // Use n8n REST API to trigger workflow through Worker
+      // Worker adds the N8N_API_KEY server-side
       response = await callN8nAPI(`/workflows/${N8N_LOVABLE_DEPLOY_WORKFLOW_ID}/execute`, 'POST', {
         businessName: payload.businessName,
         address: payload.address,

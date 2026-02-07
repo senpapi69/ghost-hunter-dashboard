@@ -1,0 +1,15 @@
+{
+  "name": "n8n-cors-handler-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker to proxy requests to n8n with API key authentication",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "secret:put": "wrangler secret put N8N_API_KEY",
+    "secret:put:url": "wrangler secret put N8N_API_BASE_URL"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}
