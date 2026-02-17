@@ -7,19 +7,19 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, subDays } from 'date-fns';
 
 export function RevenueDashboard() {
-  const { revenueStats, transactions, buildJobs } = useAppStore();
+  const { revenueStats, transactions } = useAppStore();
 
-  // Generate chart data from actual build jobs for last 30 days
+  // Generate chart data from actual transactions for last 30 days
   const chartData = useMemo(() => {
     const data = [];
     const dailyRevenue: Record<string, number> = {};
 
-    // Group build jobs by date
-    buildJobs
-      .filter(job => job.paymentStatus === 'paid' && job.triggeredAt)
-      .forEach(job => {
-        const dateKey = format(new Date(job.triggeredAt), 'MMM d');
-        dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + job.amount;
+    // Group transactions by date
+    transactions
+      .filter(tx => tx.paymentStatus === 'paid' && tx.date)
+      .forEach(tx => {
+        const dateKey = format(new Date(tx.date), 'MMM d');
+        dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + tx.amount;
       });
 
     // Generate data for last 30 days
@@ -32,36 +32,36 @@ export function RevenueDashboard() {
       });
     }
     return data;
-  }, [buildJobs]);
+  }, [transactions]);
 
-  const percentChange = revenueStats.lastMonth > 0 
+  const percentChange = revenueStats.lastMonth > 0
     ? ((revenueStats.thisMonth - revenueStats.lastMonth) / revenueStats.lastMonth * 100).toFixed(1)
     : 0;
   const isPositiveChange = Number(percentChange) >= 0;
 
-  // Get recent transactions from build jobs
-  const recentTransactions = buildJobs
-    .filter(job => job.paymentStatus === 'paid')
+  // Get recent transactions
+  const recentTransactions = transactions
+    .filter(tx => tx.paymentStatus === 'paid')
     .slice(0, 5)
-    .map(job => ({
-      id: job.id,
-      businessName: job.businessName,
-      package: job.package,
-      amount: job.amount,
-      date: job.triggeredAt,
-      paymentStatus: job.paymentStatus,
+    .map(tx => ({
+      id: tx.id,
+      businessName: tx.businessName,
+      package: tx.package,
+      amount: tx.amount,
+      date: tx.date,
+      paymentStatus: tx.paymentStatus,
     }));
 
-  const pendingTotal = buildJobs
-    .filter(job => job.paymentStatus === 'pending')
-    .reduce((sum, job) => sum + job.amount, 0);
+  const pendingTotal = transactions
+    .filter(tx => tx.paymentStatus === 'pending')
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const avgDealSize = buildJobs.length > 0
-    ? buildJobs.reduce((sum, job) => sum + job.amount, 0) / buildJobs.length
+  const avgDealSize = transactions.length > 0
+    ? transactions.reduce((sum, tx) => sum + tx.amount, 0) / transactions.length
     : 0;
 
-  const paidCount = buildJobs.filter(job => job.paymentStatus === 'paid').length;
-  const closeRate = buildJobs.length > 0 ? (paidCount / buildJobs.length * 100).toFixed(0) : 0;
+  const paidCount = transactions.filter(tx => tx.paymentStatus === 'paid').length;
+  const closeRate = transactions.length > 0 ? (paidCount / transactions.length * 100).toFixed(0) : 0;
 
   return (
     <ScrollArea className="h-full">

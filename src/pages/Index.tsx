@@ -5,9 +5,7 @@ import { DailyStats } from '@/components/DailyStats';
 import { MainTabs } from '@/components/MainTabs';
 import { DeployInvoice } from '@/components/DeployInvoice';
 import { CallLog } from '@/components/CallLog';
-import { QuickOutreach } from '@/components/QuickOutreach';
 import { AddCustomerForm } from '@/components/AddCustomerForm';
-import { EmailInvoice } from '@/components/EmailInvoice';
 import { useAppStore } from '@/stores/appStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { fetchBusinesses } from '@/lib/airtable';
@@ -81,9 +79,7 @@ const Index = () => {
               <ScrollArea className="h-full">
                 <div className="divide-y divide-primary/10">
                   <DeployInvoice business={selectedBusiness} />
-                  <EmailInvoice business={selectedBusiness} />
                   <CallLog business={selectedBusiness} />
-                  <QuickOutreach business={selectedBusiness} />
                   <AddCustomerForm business={selectedBusiness} />
                 </div>
               </ScrollArea>

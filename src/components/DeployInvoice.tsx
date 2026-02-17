@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard, Github, AlertCircle } from 'lucide-react';
 import { Business, PACKAGES, PackageType, BuildStatus, PaymentStatus } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
-import { generateLovableBuildUrl, deployToRenderFromGitHub } from '@/lib/webhook';
+import { generateLovableBuildUrl, deployToRenderFromGitHub, deployToRenderWithJobId, checkRenderDeploymentStatus } from '@/lib/webhook';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,6 @@ type DeployStage =
   | 'lovable-ready'
   | 'github-ready'
   | 'render-deploying'
-  | 'render-provisioning'
-  | 'auto-deploying'
   | 'complete';
 
 export function DeployInvoice({ business }: DeployInvoiceProps) {
@@ -44,42 +42,61 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     amount: number;
     packageName: PackageType;
   } | null>(null);
+  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  const [renderDeployError, setRenderDeployError] = useState<string>('');
 
-  const { addBuildJob, updateBuildJob, incrementStat, triggerCelebration, buildJobs } = useAppStore();
+  const { incrementStat, triggerCelebration } = useAppStore();
   const { toast } = useToast();
 
-  // Subscribe to build job updates for real-time status changes
+  // Poll render-status webhook when we have a polling job ID
   useEffect(() => {
-    if (!deployResult || !business) return;
+    if (!pollingJobId) return;
 
-    const job = buildJobs.find(j => j.businessId === business.id);
-    if (!job) return;
+    const pollInterval = setInterval(async () => {
+      try {
+        setPollCount(prev => prev + 1);
 
-    // Update deploy stage based on build job status
-    if (job.status === 'live' && deployStage !== 'complete') {
-      setDeployStage('complete');
-      setDeployResult(prev => prev ? {
-        ...prev,
-        renderUrl: job.previewUrl || prev.renderUrl,
-        buildStatus: 'live',
-      } : null);
+        const status = await checkRenderDeploymentStatus(pollingJobId);
 
-      incrementStat('sitesBuilt');
+        if (status.status === 'live' && status.deployedUrl) {
+          // Deployment complete
+          clearInterval(pollInterval);
+          setPollingJobId(null);
+          setDeployResult(prev => prev ? {
+            ...prev,
+            renderUrl: status.deployedUrl,
+            buildStatus: 'live',
+          } : null);
+          setDeployStage('complete');
+          incrementStat('sitesBuilt');
 
-      toast({
-        title: 'Website Live! 🎉',
-        description: 'Your website is now deployed on Render',
-      });
-    } else if (job.status === 'error' && deployStage !== 'complete') {
-      toast({
-        title: 'Deployment Failed',
-        description: job.errorMessage || 'An error occurred during deployment',
-        variant: 'destructive',
-      });
-    } else if (job.status === 'auto-deploying' && deployStage === 'render-provisioning') {
-      setDeployStage('auto-deploying');
-    }
-  }, [buildJobs, business, deployResult, deployStage, incrementStat, toast]);
+          toast({
+            title: 'Website Live! 🎉',
+            description: 'Your website is now deployed on Render',
+          });
+        } else if (status.status === 'failed') {
+          // Deployment failed
+          clearInterval(pollInterval);
+          setPollingJobId(null);
+          setRenderDeployError(status.error || 'Deployment failed');
+          setDeployStage('github-ready');
+
+          toast({
+            title: 'Deployment Failed',
+            description: status.error || 'An error occurred during deployment',
+            variant: 'destructive',
+          });
+        }
+        // Otherwise keep polling (status is 'queued' or 'building')
+      } catch (error) {
+        console.error('Polling error:', error);
+        // Continue polling on transient errors
+      }
+    }, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [pollingJobId, incrementStat, toast]);
 
   const getAmount = (): number => {
     if (selectedPackage === 'Custom') {
@@ -104,19 +121,6 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
     setIsDeploying(true);
     setOpen(false);
-
-    const jobId = `build-${Date.now()}`;
-
-    addBuildJob({
-      id: jobId,
-      businessId: business.id,
-      businessName: business.name,
-      package: selectedPackage,
-      amount,
-      status: 'queued',
-      paymentStatus: 'pending',
-      triggeredAt: new Date(),
-    });
 
     try {
       toast({
@@ -157,17 +161,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
         // Auto-open Lovable URL in new tab
         window.open(result.lovableUrl, '_blank');
 
-        updateBuildJob(jobId, {
-          status: 'building',
-          previewUrl: result.lovableUrl,
-        });
-
       } else {
-        updateBuildJob(jobId, {
-          status: 'error',
-          errorMessage: result.error || 'Failed to generate Lovable URL',
-        });
-
         toast({
           title: 'Generation Failed',
           description: result.error || 'Something went wrong',
@@ -175,112 +169,11 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
         });
       }
     } catch (error) {
-      updateBuildJob(jobId, {
-        status: 'error',
-        errorMessage: 'Network error',
-      });
-
       toast({
         title: 'Error',
         description: 'Failed to connect to deployment service',
         variant: 'destructive',
       });
-    } finally {
-      setIsDeploying(false);
-    }
-  };
-
-  const handleAutomatedDeploy = async () => {
-    if (!business || !selectedPackage) return;
-
-    const amount = getAmount();
-    const jobId = `build-${Date.now()}`;
-
-    setIsDeploying(true);
-    setOpen(false);
-
-    addBuildJob({
-      id: jobId,
-      businessId: business.id,
-      businessName: business.name,
-      package: selectedPackage,
-      amount,
-      status: 'queued',
-      paymentStatus: 'pending',
-      triggeredAt: new Date(),
-    });
-
-    try {
-      // Call deploy-website webhook directly
-      setDeployStage('render-provisioning');
-
-      toast({
-        title: 'Deploying Website',
-        description: 'Calling n8n webhook to deploy your site... This may take 30-60 seconds.',
-        duration: 5000,
-      });
-
-      const lovableResult = await generateLovableBuildUrl({
-        businessName: business.name,
-        phone: business.phone,
-        address: business.address,
-        email: business.email,
-        description: business.description,
-        notes: business.notes,
-        rating: business.rating,
-        package: selectedPackage,
-        amount,
-      });
-
-      if (lovableResult.success && lovableResult.lovableUrl) {
-        updateBuildJob(jobId, {
-          status: 'building',
-          previewUrl: lovableResult.lovableUrl,
-        });
-
-        setDeployResult({
-          lovableUrl: lovableResult.lovableUrl,
-          buildStatus: 'building',
-          paymentStatus: 'pending',
-          amount,
-          packageName: selectedPackage,
-        });
-
-        setDeployStage('lovable-ready');
-
-        toast({
-          title: 'Lovable URL Ready! 🚀',
-          description: 'Opening Lovable in new tab. Click "Publish to GitHub" when ready.',
-        });
-
-        window.open(lovableResult.lovableUrl, '_blank');
-        setDeployStage('auto-deploying');
-
-      } else {
-        updateBuildJob(jobId, {
-          status: 'error',
-          errorMessage: lovableResult.error || 'Failed to generate Lovable URL',
-        });
-
-        toast({
-          title: 'Deployment Failed',
-          description: lovableResult.error || 'Something went wrong',
-          variant: 'destructive',
-        });
-        setDeployStage('initial');
-      }
-    } catch (error) {
-      updateBuildJob(jobId, {
-        status: 'error',
-        errorMessage: 'Network error during deployment',
-      });
-
-      toast({
-        title: 'Error',
-        description: 'Failed to connect to deployment service',
-        variant: 'destructive',
-      });
-      setDeployStage('initial');
     } finally {
       setIsDeploying(false);
     }
@@ -297,48 +190,53 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     }
 
     setDeployStage('render-deploying' as DeployStage);
+    setRenderDeployError('');
+    setPollCount(0);
 
     try {
       toast({
         title: 'Deploying to Render',
-        description: 'This may take 2-3 minutes...',
+        description: 'Starting deployment process...',
       });
 
-      // Step 2: Deploy to Render from GitHub
-      const result = await deployToRenderFromGitHub(
+      // Step 2: Deploy to Render from GitHub with job ID
+      const result = await deployToRenderWithJobId(
         business.name,
         githubRepoInput
       );
 
-      if (result.success && result.renderUrl) {
-        setDeployResult(prev => prev ? {
-          ...prev,
-          renderUrl: result.renderUrl,
-          githubRepo: githubRepoInput,
-          buildStatus: 'live',
-        } : null);
-
-        setDeployStage('complete');
-
-        incrementStat('sitesBuilt');
+      if (result.success && result.jobId) {
+        // Start polling for deployment status
+        setPollingJobId(result.jobId);
 
         toast({
-          title: 'Website Live! 🎉',
-          description: 'Your website is now deployed on Render',
+          title: 'Deployment Started',
+          description: 'Job ID: ' + result.jobId,
         });
 
+        setDeployResult(prev => prev ? {
+          ...prev,
+          githubRepo: githubRepoInput,
+        } : null);
+
       } else {
+        const errorMsg = result.error || 'Failed to start deployment';
+        setRenderDeployError(errorMsg);
+
         toast({
           title: 'Deployment Failed',
-          description: result.error || 'Failed to deploy to Render',
+          description: errorMsg,
           variant: 'destructive',
         });
         setDeployStage('github-ready');
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to deploy to Render';
+      setRenderDeployError(errorMsg);
+
       toast({
         title: 'Error',
-        description: 'Failed to deploy to Render',
+        description: errorMsg,
         variant: 'destructive',
       });
       setDeployStage('github-ready');
@@ -371,6 +269,9 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     setCustomAmount('');
     setDeployStage('initial');
     setGithubRepoInput('');
+    setPollingJobId(null);
+    setPollCount(0);
+    setRenderDeployError('');
   };
 
   return (
@@ -392,9 +293,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
               <span className="font-bold text-foreground">{business.name}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {deployStage === 'render-provisioning' && 'Initializing deployment...'}
-              {deployStage === 'auto-deploying' && 'Deploying to Render...'}
-              {!['render-provisioning', 'auto-deploying'].includes(deployStage) && 'Initializing deployment...'}
+              Initializing deployment...
             </p>
           </div>
         </div>
@@ -417,43 +316,22 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           {/* Deployment Stage Progress */}
           <div className="bg-secondary/30 border border-primary/20 p-3">
             <div className="flex items-center justify-between text-xs mb-2">
-              <span className={deployStage === 'lovable-ready' || deployStage === 'render-provisioning' || deployStage === 'auto-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
+              <span className={deployStage === 'lovable-ready' || deployStage === 'github-ready' || deployStage === 'render-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
                 ✓ Lovable
               </span>
-              <span className={deployStage === 'render-provisioning' || deployStage === 'auto-deploying' || deployStage === 'complete' ? 'text-warning animate-pulse' : deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
-                {deployStage === 'render-provisioning' ? '→ Provisioning' : deployStage === 'auto-deploying' ? '→ Deploying' : '→'} Render
+              <span className={
+                deployStage === 'complete' ? 'text-success' :
+                deployStage === 'render-deploying' ? 'text-warning animate-pulse' :
+                deployStage === 'github-ready' ? 'text-warning' :
+                'text-muted-foreground'
+              }>
+                {deployStage === 'github-ready' || deployStage === 'render-deploying' ? '→ Deploying' : '→'} Render
               </span>
               <span className={deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
                 ✓ Live
               </span>
             </div>
           </div>
-
-          {/* Render Provisioning Stage */}
-          {deployStage === 'render-provisioning' && (
-            <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
-              <div className="flex items-center gap-2 justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-warning" />
-                <span className="font-bold text-warning">Provisioning Render Service...</span>
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Configuring auto-deploy settings
-              </p>
-            </div>
-          )}
-
-          {/* Auto-Deploying Stage */}
-          {deployStage === 'auto-deploying' && (
-            <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
-              <div className="flex items-center gap-2 justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-warning" />
-                <span className="font-bold text-warning">Deploying to Render...</span>
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                This may take 2-3 minutes. You'll be notified when it's live.
-              </p>
-            </div>
-          )}
 
           {/* Step 1: Lovable URL Ready */}
           {deployStage === 'lovable-ready' && deployResult.lovableUrl && (
@@ -522,10 +400,35 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
             <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
               <div className="flex items-center gap-2 justify-center">
                 <Loader2 className="h-5 w-5 animate-spin text-warning" />
-                <span className="font-bold text-warning">Deploying to Render...</span>
+                <span className="font-bold text-warning">
+                  {pollCount === 0 ? 'Starting deployment...' : `Deploying to Render... (${pollCount} checks)`}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">
-                This may take 2-3 minutes
+                {pollCount < 6
+                  ? 'Checking deployment status every 30 seconds...'
+                  : 'Still deploying... This can take 2-3 minutes for new services'}
+              </p>
+              {pollCount >= 6 && (
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  (Poll count: {pollCount})
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Show error if deployment fails */}
+          {deployStage === 'github-ready' && renderDeployError && (
+            <div className="bg-destructive/10 border border-destructive/30 p-4">
+              <div className="flex items-center gap-2 justify-center">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <span className="font-bold text-destructive">Deployment Failed</span>
+              </div>
+              <p className="text-xs text-destructive text-center mt-2">
+                {renderDeployError}
+              </p>
+              <p className="text-xs text-muted-foreground text-center mt-1">
+                Please check your GitHub repo URL and try again
               </p>
             </div>
           )}
@@ -736,39 +639,21 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                   )}
                 </button>
 
-                {/* Deploy Buttons */}
-                <div className="space-y-3 pt-2">
+                {/* Deploy Button - Manual Flow Only */}
+                <div className="pt-2">
                   <Button
-                    onClick={handleAutomatedDeploy}
+                    onClick={handleDeploy}
                     disabled={!selectedPackage || (selectedPackage === 'Custom' && getAmount() <= 0)}
                     className="w-full cyber-button h-12 text-sm"
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    Automated Deploy (Recommended)
+                    Deploy Site
                     {getAmount() > 0 && <span className="ml-2">— ${getAmount().toLocaleString()}</span>}
-                  </Button>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-primary/20" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">Or use manual flow</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleDeploy}
-                    disabled={!selectedPackage || (selectedPackage === 'Custom' && getAmount() <= 0)}
-                    variant="outline"
-                    className="w-full h-10 text-xs"
-                  >
-                    Manual Deploy (Lovable → GitHub → Render)
                   </Button>
                 </div>
 
                 <p className="text-[10px] text-muted-foreground text-center">
-                  Automated: Creates GitHub repo & deploys to Render automatically
+                  Manual flow: Generate site in Lovable → Publish to GitHub → Deploy to Render
                 </p>
               </div>
             )}

@@ -1,28 +1,28 @@
 import { Business } from '@/types/business';
-import { GitHubCreatePayload, GitHubCreateResponse } from '@/types/webhooks';
+import { GitHubCreatePayload, GitHubCreateResponse, RenderDeployResponse, RenderStatusResponse } from '@/types/webhooks';
 
 // n8n REST API Configuration
 const N8N_API_BASE_URL =
-  import.meta.env.VITE_N8N_API_BASE_URL || 'https://n8n-cors-handler.bigbbghud.workers.dev';
+  import.meta.env.VITE_N8N_API_BASE_URL || 'https://n8n.dhud.tech';
 const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY || '';
 
-// Legacy webhook URLs (for fallback)
-const N8N_WEBHOOK_URL =
-  import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/build-site';
-const N8N_SMS_WEBHOOK_URL =
-  import.meta.env.VITE_N8N_SMS_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/send-sms';
-const N8N_EMAIL_WEBHOOK_URL =
-  import.meta.env.VITE_N8N_EMAIL_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/send-email';
+// External Traefik webhook URLs (accessible from browser)
+const N8N_LOVABLE_DEPLOY_WEBHOOK_URL =
+  import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WEBHOOK_URL || 'https://n8n.dhud.tech/webhook/deploy-website';
+const N8N_RENDER_DEPLOY_URL =
+  import.meta.env.VITE_N8N_RENDER_DEPLOY_URL || 'https://n8n.dhud.tech/webhook/github-to-render';
+const N8N_RENDER_DEPLOY_WEBHOOK_URL =
+  import.meta.env.VITE_N8N_RENDER_DEPLOY_WEBHOOK_URL || 'https://n8n.dhud.tech/webhook/render-deploy';
+const N8N_RENDER_STATUS_WEBHOOK_URL =
+  import.meta.env.VITE_N8N_RENDER_STATUS_WEBHOOK_URL || 'https://n8n.dhud.tech/webhook/render-status';
+const N8N_DEPLOY_AND_INVOICE_URL =
+  import.meta.env.VITE_N8N_DEPLOY_AND_INVOICE_URL || 'https://n8n.dhud.tech/webhook/deploy-and-invoice';
 
 // Demo mode - simulates successful webhook calls when real webhooks fail
 const DEMO_MODE = false;
 
 /**
- * Helper function to call n8n REST API through Cloudflare Worker
- *
- * Note: API key is NOT sent from client. The Cloudflare Worker adds the
- * N8N_API_KEY from its environment variables when forwarding to n8n.
- * This keeps the API key secure on the server-side.
+ * Helper function to call n8n REST API
  */
 async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any): Promise<Response> {
   const url = `${N8N_API_BASE_URL}/api/v1${endpoint}`;
@@ -30,9 +30,6 @@ async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any)
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-
-  // API key is added by the Cloudflare Worker, not the client
-  // This keeps credentials secure on the server side
 
   const response = await fetch(url, {
     method,
@@ -43,140 +40,9 @@ async function callN8nAPI(endpoint: string, method: string = 'POST', data?: any)
   return response;
 }
 
-export async function triggerWebsiteBuild(
-  business: Business
-): Promise<{ success: boolean; demoUrl?: string; isDemo?: boolean }> {
-  const slug = business.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  const demoUrl = `${slug}.onrender.com`;
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        placeId: business.placeId,
-        businessName: business.name,
-        phone: business.phone,
-        address: business.address,
-        timestamp: new Date().toISOString(),
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`Webhook returned ${response.status}`);
-    }
-
-    return { success: true, demoUrl };
-  } catch (error) {
-    console.error('Webhook failed:', error);
-
-    // In demo mode, simulate success after webhook failure
-    if (DEMO_MODE) {
-      console.log('Demo mode: Simulating successful build');
-      // Simulate build delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return { success: true, demoUrl, isDemo: true };
-    }
-
-    return { success: false };
-  }
-}
-
-export async function sendSMS(
-  to: string,
-  message: string,
-  businessName: string
-): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(N8N_SMS_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to,
-        message,
-        businessName,
-        type: 'sms',
-        timestamp: new Date().toISOString(),
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    console.error('SMS webhook failed:', error);
-    // Demo mode: simulate success
-    if (DEMO_MODE) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return true;
-    }
-    return false;
-  }
-}
-
-export async function sendEmail(
-  to: string,
-  subject: string,
-  body: string,
-  businessName: string
-): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(N8N_EMAIL_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to,
-        subject,
-        message: body,
-        businessName,
-        type: 'email',
-        timestamp: new Date().toISOString(),
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    console.error('Email webhook failed:', error);
-    if (DEMO_MODE) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return true;
-    }
-    return false;
-  }
-}
-
 // n8n Workflow IDs (configure these in n8n)
 const N8N_LOVABLE_DEPLOY_WORKFLOW_ID =
   import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WORKFLOW_ID || '';
-
-// Legacy webhook URLs (for fallback)
-const N8N_DEPLOY_WEBHOOK_URL =
-  import.meta.env.VITE_N8N_DEPLOY_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/deploy-and-invoice';
-const N8N_LOVABLE_DEPLOY_WEBHOOK_URL =
-  import.meta.env.VITE_N8N_LOVABLE_DEPLOY_WEBHOOK_URL || 'https://n8n.hudsond.me/webhook/deploy-website';
 
 export interface DeployAndInvoicePayload {
   placeId: string;
@@ -230,7 +96,7 @@ export async function triggerDeployAndInvoice(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(N8N_DEPLOY_WEBHOOK_URL, {
+    const response = await fetch(N8N_DEPLOY_AND_INVOICE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -275,7 +141,7 @@ export async function triggerDeployAndInvoice(
 }
 
 /**
- * Step 1: Generate Lovable Build URL using n8n REST API
+ * Step 1: Generate Lovable Build URL using n8n webhook
  * Returns a URL that auto-starts Lovable AI website builder
  */
 export async function generateLovableBuildUrl(
@@ -290,13 +156,12 @@ export async function generateLovableBuildUrl(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds for Lovable API
 
-    let response: Response;
-
-    // Use REST API if workflow ID is configured (Worker handles API key)
-    if (N8N_LOVABLE_DEPLOY_WORKFLOW_ID) {
-      // Use n8n REST API to trigger workflow through Worker
-      // Worker adds the N8N_API_KEY server-side
-      response = await callN8nAPI(`/workflows/${N8N_LOVABLE_DEPLOY_WORKFLOW_ID}/execute`, 'POST', {
+    const response = await fetch(N8N_LOVABLE_DEPLOY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         businessName: payload.businessName,
         address: payload.address,
         phone: payload.phone,
@@ -307,30 +172,9 @@ export async function generateLovableBuildUrl(
         package: payload.package,
         amount: payload.amount,
         timestamp: new Date().toISOString(),
-      });
-    } else {
-      // Fall back to webhook (through Worker for CORS)
-      const webhookUrl = `${N8N_API_BASE_URL}/webhook/deploy-website`;
-      response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessName: payload.businessName,
-          address: payload.address,
-          phone: payload.phone,
-          email: payload.email,
-          description: payload.description,
-          notes: payload.notes,
-          rating: payload.rating,
-          package: payload.package,
-          amount: payload.amount,
-          timestamp: new Date().toISOString(),
-        }),
-        signal: controller.signal,
-      });
-    }
+      }),
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
 
@@ -375,9 +219,6 @@ export async function deployToRenderFromGitHub(
   businessName: string,
   githubRepo: string
 ): Promise<{ success: boolean; renderUrl?: string; error?: string }> {
-  const N8N_RENDER_DEPLOY_URL =
-    import.meta.env.VITE_N8N_RENDER_DEPLOY_URL || 'https://n8n.hudsond.me/webhook/github-to-render';
-
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -426,37 +267,43 @@ export async function deployToRenderFromGitHub(
 }
 
 /**
- * Step 3 (NEW): Create GitHub repository and configure webhook
- * Part of automated deployment flow
- * Calls n8n webhook which creates repo via GitHub API and configures webhook
+ * Legacy function for backward compatibility
+ * Now uses the two-step process: Lovable URL generation → Render deployment
  */
-export async function createGitHubRepoAndWebhook(
+export async function triggerLovableDeployment(
+  payload: LovableDeployPayload
+): Promise<LovableDeployResponse> {
+  return generateLovableBuildUrl(payload);
+}
+
+/**
+ * Deploy to Render from GitHub repo with polling support
+ * Returns immediately with a job ID for status tracking
+ */
+export async function deployToRenderWithJobId(
   businessName: string,
-  packageTier: string
-): Promise<GitHubCreateResponse> {
-  const N8N_GITHUB_CREATE_URL =
-    import.meta.env.VITE_N8N_GITHUB_CREATE_URL || 'https://n8n.hudsond.me/webhook/create-github-repo';
-
-  // Generate repository name using existing slug pattern
-  const repoName = `${businessName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')}-${packageTier.toLowerCase()}`;
-
+  githubRepo: string
+): Promise<RenderDeployResponse> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds for GitHub API
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    const response = await fetch(N8N_GITHUB_CREATE_URL, {
+    // Normalize business name: lowercase, replace special chars with hyphens
+    const normalizedName = businessName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const response = await fetch(N8N_RENDER_DEPLOY_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        businessName,
-        packageTier,
-        timestamp: new Date().toISOString(),
-      } as GitHubCreatePayload),
+        repo_url: githubRepo,
+        name: normalizedName,
+        owner_id: "tea-d57vla3e5dus73dkar5g",
+      }),
       signal: controller.signal,
     });
 
@@ -467,39 +314,112 @@ export async function createGitHubRepoAndWebhook(
     }
 
     const data = await response.json();
+
+    // Handle array response from n8n
+    const result = Array.isArray(data) ? data[0] : data;
+
     return {
-      success: data.success,
-      githubRepo: data.githubRepo,
-      repoName: data.repoName,
-      webhookUrl: data.webhookUrl,
+      success: result.success ?? true,
+      jobId: result.service_id, // Use service_id as the job ID for polling
     };
   } catch (error) {
-    console.error('GitHub repo creation failed:', error);
+    console.error('Render deployment failed:', error);
 
     if (DEMO_MODE) {
-      console.log('Demo mode: Simulating GitHub repo creation');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       return {
         success: true,
-        githubRepo: `https://github.com/senpapi69/${repoName}`,
-        repoName,
-        webhookUrl: 'https://n8n.hudsond.me/webhook/github-render-deploy',
+        jobId: `demo-job-${Date.now()}`,
       };
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create GitHub repository',
+      error: error instanceof Error ? error.message : 'Failed to start deployment',
     };
   }
 }
 
 /**
- * Legacy function for backward compatibility
- * Now uses the two-step process: Lovable URL generation → Render deployment
+ * Check Render deployment status
+ * Used for polling the deployment progress
  */
-export async function triggerLovableDeployment(
-  payload: LovableDeployPayload
-): Promise<LovableDeployResponse> {
-  return generateLovableBuildUrl(payload);
+export async function checkRenderDeploymentStatus(
+  jobId: string
+): Promise<RenderStatusResponse> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(`${N8N_RENDER_STATUS_WEBHOOK_URL}?jobId=${jobId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Status check returned ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Handle array response from n8n
+    const result = Array.isArray(data) ? data[0] : data;
+
+    // Map Render API status to our status
+    // Check both 'status' and 'deploy_status' fields
+    let status: 'queued' | 'building' | 'live' | 'failed' = 'building';
+
+    const statusCode = result.status || result.deploy_status;
+
+    // Debug logging
+    console.log('Render status check:', {
+      jobId: result.service_id || result.jobId,
+      statusCode,
+      rawStatus: result.status,
+      rawDeployStatus: result.deploy_status,
+    });
+
+    if (statusCode === 'live' || statusCode === 'ready' || statusCode === 'success' || statusCode === 'succeeded') {
+      status = 'live'; // Deployed successfully
+      console.log('✅ Deployment live!');
+    } else if (statusCode === 'failed' || statusCode === 'error') {
+      status = 'failed'; // Deployment failed
+      console.log('❌ Deployment failed');
+    } else if (statusCode === null || statusCode === undefined || statusCode === 'building' || statusCode === 'created' || statusCode === 'queued') {
+      status = 'building'; // Still deploying or waiting
+      console.log('⏳ Still building...');
+    }
+
+    return {
+      jobId: result.service_id || result.jobId,
+      status,
+      deployedUrl: result.deployedUrl || result.service_url,
+      error: result.error,
+      progress: result.message || result.progress,
+      logs: result.logs,
+    };
+  } catch (error) {
+    console.error('Status check failed:', error);
+
+    if (DEMO_MODE) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Demo mode: return success after 3 polls
+      return {
+        jobId,
+        status: 'queued',
+        error: undefined,
+      };
+    }
+
+    return {
+      jobId,
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Status check failed',
+    };
+  }
 }

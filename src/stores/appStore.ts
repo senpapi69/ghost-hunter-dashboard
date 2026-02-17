@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Business, BuildJob, CallLog, DailyStats, RevenueStats, Transaction, PaymentStatus } from '@/types/business';
+import { Business, CallLog, DailyStats, RevenueStats, Transaction, PaymentStatus } from '@/types/business';
 
 interface AppState {
   selectedBusiness: Business | null;
-  buildJobs: BuildJob[];
   callLogs: CallLog[];
   transactions: Transaction[];
   dailyStats: DailyStats;
@@ -12,11 +11,9 @@ interface AppState {
   lastPaymentCount: number;
   showCelebration: boolean;
   celebrationData: { businessName: string; amount: number } | null;
-  
+
   // Actions
   setSelectedBusiness: (business: Business | null) => void;
-  addBuildJob: (job: BuildJob) => void;
-  updateBuildJob: (id: string, updates: Partial<BuildJob>) => void;
   addCallLog: (log: CallLog) => void;
   addTransaction: (transaction: Transaction) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
@@ -51,7 +48,6 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       selectedBusiness: null,
-      buildJobs: [],
       callLogs: [],
       transactions: [],
       dailyStats: getInitialStats(),
@@ -61,40 +57,6 @@ export const useAppStore = create<AppState>()(
       celebrationData: null,
 
       setSelectedBusiness: (business) => set({ selectedBusiness: business }),
-
-      addBuildJob: (job) =>
-        set((state) => ({
-          buildJobs: [job, ...state.buildJobs],
-          dailyStats: {
-            ...state.dailyStats,
-            pendingInvoices: state.dailyStats.pendingInvoices + 1,
-            pendingInvoicesTotal: state.dailyStats.pendingInvoicesTotal + job.amount,
-          },
-        })),
-
-      updateBuildJob: (id, updates) =>
-        set((state) => {
-          const updatedJobs = state.buildJobs.map((job) =>
-            job.id === id ? { ...job, ...updates } : job
-          );
-          
-          // If payment status changed to paid, update stats
-          const job = state.buildJobs.find(j => j.id === id);
-          let newDailyStats = state.dailyStats;
-          
-          if (job && updates.paymentStatus === 'paid' && job.paymentStatus !== 'paid') {
-            newDailyStats = {
-              ...state.dailyStats,
-              pendingInvoices: Math.max(0, state.dailyStats.pendingInvoices - 1),
-              pendingInvoicesTotal: Math.max(0, state.dailyStats.pendingInvoicesTotal - job.amount),
-            };
-          }
-          
-          return {
-            buildJobs: updatedJobs,
-            dailyStats: newDailyStats,
-          };
-        }),
 
       addCallLog: (log) =>
         set((state) => ({
@@ -164,7 +126,6 @@ export const useAppStore = create<AppState>()(
     {
       name: 'ghost-hunter-storage-v2',
       partialize: (state) => ({
-        buildJobs: state.buildJobs,
         callLogs: state.callLogs,
         transactions: state.transactions,
         dailyStats: state.dailyStats,
