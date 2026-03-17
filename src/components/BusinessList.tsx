@@ -21,14 +21,13 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-3 border-b border-primary/20 flex-shrink-0">
-          <h2 className="font-display text-xs font-bold tracking-wider text-primary flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-primary animate-pulse" />
-            LOADING TARGETS...
+        <div className="p-4 border-b border-border flex-shrink-0">
+          <h2 className="font-display text-sm font-semibold text-foreground flex items-center gap-2">
+            Loading Targets...
           </h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
         </div>
       </div>
     );
@@ -37,13 +36,13 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
   if (error || !businesses?.length) {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-3 border-b border-primary/20">
-          <h2 className="font-display text-xs font-bold tracking-wider text-muted-foreground">
-            {error ? 'CONNECTION ERROR' : 'NO TARGETS'}
+        <div className="p-4 border-b border-border">
+          <h2 className="font-display text-sm font-semibold text-muted-foreground">
+            {error ? 'Connection Error' : 'No Targets'}
           </h2>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-muted-foreground text-xs text-center">
+          <p className="text-muted-foreground text-sm text-center">
             {error ? 'Check API configuration' : 'Add a customer to get started'}
           </p>
         </div>
@@ -53,26 +52,25 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b border-primary/20 flex-shrink-0">
-        <h2 className="font-display text-sm font-semibold tracking-wide text-primary flex items-center gap-2">
-          <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+      <div className="p-4 border-b border-border flex-shrink-0">
+        <h2 className="font-display text-sm font-semibold text-foreground flex items-center gap-2">
           Target List
-          <span className="text-muted-foreground font-mono text-xs ml-auto bg-card px-2 py-0.5 rounded-md">
+          <span className="text-muted-foreground font-mono text-xs ml-auto bg-secondary border border-border px-2 py-0.5 rounded-md">
             {businesses.length}
           </span>
         </h2>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="divide-y divide-primary/5">
+        <div className="divide-y divide-border/50">
           {businesses.map((business) => (
             <button
               key={business.id}
               onClick={() => onSelect(business)}
               className={cn(
                 'w-full p-4 text-left transition-all duration-200 relative group',
-                'hover:bg-primary/5',
-                selectedId === business.id && 'bg-primary/10'
+                'hover:bg-muted/50',
+                selectedId === business.id && 'bg-muted'
               )}
             >
               {/* Active indicator */}
@@ -80,8 +78,8 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
                 className={cn(
                   'absolute left-0 top-0 bottom-0 w-1 rounded-r transition-all duration-200',
                   selectedId === business.id
-                    ? 'bg-primary shadow-md'
-                    : 'bg-transparent group-hover:bg-primary/30'
+                    ? 'bg-primary'
+                    : 'bg-transparent group-hover:bg-border/50'
                 )}
               />
 
@@ -89,7 +87,7 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {business.rating === 5 && (
-                      <Star className="h-3.5 w-3.5 fill-primary text-primary flex-shrink-0" />
+                      <Star className="h-3.5 w-3.5 fill-warning text-warning flex-shrink-0" />
                     )}
                     <span className="font-semibold text-sm text-foreground truncate">
                       {typeof business.name === 'string' ? business.name : String(business.name || 'Unknown')}
@@ -109,7 +107,7 @@ export function BusinessList({ selectedId, onSelect }: BusinessListProps) {
                     <span className="text-xs truncate">{typeof business.address === 'string' ? business.address : String(business.address || '')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-primary">{business.rating}</span>
+                    <span className="text-xs font-semibold text-foreground">{business.rating}</span>
                     <StarRating rating={business.rating} />
                   </div>
                 </div>

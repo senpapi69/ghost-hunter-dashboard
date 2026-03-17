@@ -32,9 +32,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen h-screen bg-background flex flex-col overflow-hidden">
-      {/* Scanline overlay - reduced */}
-      <div className="fixed inset-0 scanlines pointer-events-none z-50 opacity-30" />
-
       <Header />
 
       <main className="flex-1 overflow-hidden">
@@ -44,9 +41,9 @@ const Index = () => {
             defaultSize={20}
             minSize={15}
             maxSize={35}
-            className="bg-card/50"
+            className="bg-sidebar"
           >
-            <div className="h-full flex flex-col overflow-hidden border-r border-primary/20">
+            <div className="h-full flex flex-col overflow-hidden border-r border-border">
               <div className="flex-1 overflow-hidden">
                 <BusinessList
                   selectedId={selectedBusiness?.id || null}
@@ -57,27 +54,27 @@ const Index = () => {
             </div>
           </ResizablePanel>
 
-          <ResizableHandle className="w-1 bg-primary/10 hover:bg-primary/30 transition-colors data-[resize-handle-active]:bg-primary/50" />
+          <ResizableHandle className="w-1 bg-border hover:bg-border/60 transition-colors data-[resize-handle-active]:bg-border" />
 
           {/* Main Content */}
           <ResizablePanel defaultSize={55} minSize={30}>
-            <div className="h-full bg-card/30 overflow-hidden">
+            <div className="h-full bg-background overflow-hidden">
               <MainTabs business={selectedBusiness} />
             </div>
           </ResizablePanel>
 
-          <ResizableHandle className="w-1 bg-primary/10 hover:bg-primary/30 transition-colors data-[resize-handle-active]:bg-primary/50" />
+          <ResizableHandle className="w-1 bg-border hover:bg-border/60 transition-colors data-[resize-handle-active]:bg-border" />
 
           {/* Right Sidebar - Resizable */}
           <ResizablePanel
             defaultSize={25}
             minSize={18}
             maxSize={35}
-            className="bg-card/50"
+            className="bg-card"
           >
-            <div className="h-full border-l border-primary/20 overflow-hidden">
+            <div className="h-full border-l border-border overflow-hidden">
               <ScrollArea className="h-full">
-                <div className="divide-y divide-primary/10">
+                <div className="divide-y divide-border/50">
                   <DeployInvoice business={selectedBusiness} />
                   <CallLog business={selectedBusiness} />
                   <AddCustomerForm business={selectedBusiness} />
@@ -89,7 +86,7 @@ const Index = () => {
       </main>
 
       {/* Keyboard shortcuts hint */}
-      <footer className="h-8 border-t border-primary/20 bg-card/90 backdrop-blur-sm flex items-center justify-center gap-6 text-xs text-muted-foreground">
+      <footer className="h-8 border-t border-border bg-card/50 backdrop-blur-sm flex items-center justify-center gap-6 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">↑</kbd>
           <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">↓</kbd>

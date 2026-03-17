@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard, Github, AlertCircle } from 'lucide-react';
+import { Zap, DollarSign, Loader2, Copy, ExternalLink, Send, Check, CreditCard, Github, AlertCircle, Building, Rocket } from 'lucide-react';
 import { Business, PACKAGES, PackageType, BuildStatus, PaymentStatus } from '@/types/business';
 import { useAppStore } from '@/stores/appStore';
 import { generateLovableBuildUrl, deployToRenderFromGitHub, deployToRenderWithJobId, checkRenderDeploymentStatus } from '@/lib/webhook';
@@ -276,10 +276,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
   return (
     <div className="p-4">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-3 mb-4">
+      <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
         <Zap className="h-4 w-4 text-primary" />
         <DollarSign className="h-4 w-4 text-primary" />
-        <h3 className="font-display text-sm font-semibold tracking-wide text-primary">
+        <h3 className="font-display text-sm font-semibold text-foreground">
           Deploy & Invoice
         </h3>
       </div>
@@ -287,7 +287,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
       {/* Deploying state */}
       {isDeploying && business && (
         <div className="space-y-3">
-          <div className="bg-secondary/30 border border-warning/30 p-3 animate-pulse">
+          <div className="bg-secondary/30 border border-border p-3">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-warning" />
               <span className="font-bold text-foreground">{business.name}</span>
@@ -303,9 +303,9 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
       {deployResult && business && !isDeploying ? (
         <div className="space-y-3">
           {/* Business & Package Info */}
-          <div className="bg-secondary/30 border border-primary/20 p-3">
+          <div className="bg-secondary/30 border border-border p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">🏗️</span>
+              <Building className="h-4 w-4 text-foreground" />
               <span className="font-bold text-foreground">{business.name}</span>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -314,14 +314,14 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           </div>
 
           {/* Deployment Stage Progress */}
-          <div className="bg-secondary/30 border border-primary/20 p-3">
+          <div className="bg-secondary/30 border border-border p-3 rounded-lg">
             <div className="flex items-center justify-between text-xs mb-2">
               <span className={deployStage === 'lovable-ready' || deployStage === 'github-ready' || deployStage === 'render-deploying' || deployStage === 'complete' ? 'text-success' : 'text-muted-foreground'}>
                 ✓ Lovable
               </span>
               <span className={
                 deployStage === 'complete' ? 'text-success' :
-                deployStage === 'render-deploying' ? 'text-warning animate-pulse' :
+                deployStage === 'render-deploying' ? 'text-warning' :
                 deployStage === 'github-ready' ? 'text-warning' :
                 'text-muted-foreground'
               }>
@@ -335,10 +335,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
           {/* Step 1: Lovable URL Ready */}
           {deployStage === 'lovable-ready' && deployResult.lovableUrl && (
-            <div className="bg-warning/10 border border-warning/30 p-4">
+            <div className="bg-secondary/30 border border-border p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">🚀</span>
-                <h4 className="font-bold text-warning">Step 1: Build in Lovable</h4>
+                <Rocket className="h-5 w-5 text-primary" />
+                <h4 className="font-bold text-foreground">Step 1: Build in Lovable</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
                 Lovable has opened in a new tab. Click "Publish to GitHub" when your site is ready.
@@ -347,7 +347,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs border-primary/40 hover:bg-primary/10"
+                  className="w-full text-xs border-border hover:bg-muted/50"
                   onClick={() => window.open(deployResult.lovableUrl, '_blank')}
                 >
                   <ExternalLink className="h-3 w-3 mr-1" /> Re-open Lovable
@@ -355,7 +355,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 <Button
                   variant="default"
                   size="sm"
-                  className="w-full text-xs bg-success hover:bg-success/80"
+                  className="w-full text-xs bg-success hover:bg-success/90 text-white"
                   onClick={() => setDeployStage('github-ready')}
                 >
                   <Check className="h-3 w-3 mr-1" /> I've Published to GitHub
@@ -366,10 +366,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
           {/* Step 2: GitHub to Render Deployment */}
           {deployStage === 'github-ready' && (
-            <div className="bg-primary/10 border border-primary/30 p-4">
+            <div className="bg-secondary/30 border border-border p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Github className="h-5 w-5 text-primary" />
-                <h4 className="font-bold text-primary">Step 2: Deploy to Render</h4>
+                <Github className="h-5 w-5 text-foreground" />
+                <h4 className="font-bold text-foreground">Step 2: Deploy to Render</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
                 Enter your GitHub repository URL (from Lovable):
@@ -380,12 +380,12 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                   value={githubRepoInput}
                   onChange={(e) => setGithubRepoInput(e.target.value)}
                   placeholder="https://github.com/username/repo"
-                  className="cyber-input text-xs"
+                  className="text-xs"
                 />
                 <Button
                   variant="default"
                   size="sm"
-                  className="w-full text-xs cyber-button"
+                  className="w-full text-xs"
                   onClick={handleRenderDeploy}
                   disabled={!githubRepoInput}
                 >
@@ -397,7 +397,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
           {/* Step 3: Deploying to Render */}
           {deployStage === 'render-deploying' && (
-            <div className="bg-warning/10 border border-warning/30 p-4 animate-pulse">
+            <div className="bg-secondary/30 border border-border p-4 rounded-lg">
               <div className="flex items-center gap-2 justify-center">
                 <Loader2 className="h-5 w-5 animate-spin text-warning" />
                 <span className="font-bold text-warning">
@@ -419,7 +419,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
           {/* Show error if deployment fails */}
           {deployStage === 'github-ready' && renderDeployError && (
-            <div className="bg-destructive/10 border border-destructive/30 p-4">
+            <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
               <div className="flex items-center gap-2 justify-center">
                 <AlertCircle className="h-5 w-5 text-destructive" />
                 <span className="font-bold text-destructive">Deployment Failed</span>
@@ -437,7 +437,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           {deployStage === 'complete' && (
             <>
               {deployResult.lovableUrl && (
-                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <span className="text-xs text-muted-foreground">Lovable URL:</span>
                   <a
                     href={deployResult.lovableUrl}
@@ -450,7 +450,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 </div>
               )}
               {deployResult.renderUrl && (
-                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <span className="text-xs text-muted-foreground">Live Site:</span>
                   <a
                     href={deployResult.renderUrl}
@@ -463,7 +463,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 </div>
               )}
               {deployResult.githubRepo && (
-                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <span className="text-xs text-muted-foreground">GitHub:</span>
                   <a
                     href={deployResult.githubRepo}
@@ -479,10 +479,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           )}
 
           {/* Payment Status Box */}
-          <div className={`p-4 border-2 transition-all ${
+          <div className={`p-4 border-2 rounded-xl transition-all ${
             deployResult.paymentStatus === 'paid'
-              ? 'border-success bg-success/10 glow-success'
-              : 'border-warning bg-warning/5 animate-pulse'
+              ? 'border-success bg-success/10'
+              : 'border-warning bg-warning/5'
           }`}>
             <div className="flex items-center justify-center gap-2">
               {deployResult.paymentStatus === 'paid' ? (
@@ -535,7 +535,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs h-8 border-success/40 text-success hover:bg-success/10"
+                  className="w-full text-xs h-8 border-success text-success hover:bg-success/10"
                   onClick={handleMarkAsPaid}
                 >
                   <Check className="h-3 w-3 mr-1" />
@@ -549,7 +549,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full text-[10px] text-muted-foreground"
+            className="w-full text-xs text-muted-foreground"
             onClick={resetDeploy}
           >
             Create New Deployment
@@ -560,16 +560,16 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="w-full cyber-button h-10"
+              className="w-full h-10"
               disabled={!business}
             >
               <Zap className="h-4 w-4 mr-2" />
               {business ? `DEPLOY SITE — ${business.name}` : 'DEPLOY SITE'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-background border-primary/40 max-w-lg shadow-2xl">
+          <DialogContent className="bg-card border-border max-w-lg shadow-card-lg rounded-xl">
             <DialogHeader>
-              <DialogTitle className="font-display text-primary flex items-center gap-2 text-lg">
+              <DialogTitle className="font-display text-foreground flex items-center gap-2 text-lg">
                 <Zap className="h-5 w-5" />
                 Deploy Site
               </DialogTitle>
@@ -581,7 +581,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
             {business && (
               <div className="space-y-4 pt-2">
                 {/* Business Info */}
-                <div className="bg-secondary/30 border border-primary/20 p-4">
+                <div className="bg-secondary/30 border border-border p-4 rounded-lg">
                   <h3 className="font-bold text-foreground text-lg">{business.name}</h3>
                   <p className="text-sm text-muted-foreground">{business.phone}</p>
                   <p className="text-sm text-muted-foreground">{business.address}</p>
@@ -589,7 +589,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
 
                 {/* Package Selection */}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Select Package</p>
+                  <p className="text-xs text-muted-foreground mb-3">Select Package</p>
                   <div className="grid grid-cols-2 gap-3">
                     {PACKAGES.map((pkg) => (
                       <button
@@ -597,15 +597,15 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                         onClick={() => setSelectedPackage(pkg.id)}
                         className={`p-4 border transition-all text-center rounded-lg ${
                           selectedPackage === pkg.id
-                            ? 'border-primary bg-primary/10 shadow-lg'
-                            : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
+                            ? 'border-primary bg-primary/10 shadow-card'
+                            : 'border-border hover:border-border/60 bg-secondary/30'
                         }`}
                       >
                         <div className="text-2xl mb-2">{pkg.icon}</div>
                         <div className="font-display text-sm font-bold uppercase">{pkg.name}</div>
                         <div className="text-success font-mono font-bold text-lg">${pkg.price}</div>
                         <div className="text-xs text-primary font-semibold mt-1">+${pkg.monthlyFee}/mo</div>
-                        <div className="text-[11px] text-muted-foreground mt-1">{pkg.description}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{pkg.description}</div>
                       </button>
                     ))}
                   </div>
@@ -614,10 +614,10 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                 {/* Custom Amount */}
                 <button
                   onClick={() => setSelectedPackage('Custom')}
-                  className={`w-full p-4 border transition-all ${
+                  className={`w-full p-4 border transition-all rounded-lg ${
                     selectedPackage === 'Custom'
-                      ? 'border-primary bg-primary/10 glow-cyan'
-                      : 'border-primary/20 hover:border-primary/40 bg-secondary/30'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-border/60 bg-secondary/30'
                   }`}
                 >
                   <div className="flex items-center gap-2 justify-center">
@@ -632,7 +632,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
                         placeholder="Enter amount"
-                        className="cyber-input text-center font-mono text-lg"
+                        className="text-center font-mono text-lg"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
@@ -644,7 +644,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                   <Button
                     onClick={handleDeploy}
                     disabled={!selectedPackage || (selectedPackage === 'Custom' && getAmount() <= 0)}
-                    className="w-full cyber-button h-12 text-sm"
+                    className="w-full h-12 text-sm"
                   >
                     <Zap className="h-4 w-4 mr-2" />
                     Deploy Site
@@ -652,7 +652,7 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
                   </Button>
                 </div>
 
-                <p className="text-[10px] text-muted-foreground text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   Manual flow: Generate site in Lovable → Publish to GitHub → Deploy to Render
                 </p>
               </div>

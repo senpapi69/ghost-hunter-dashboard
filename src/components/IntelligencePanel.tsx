@@ -97,8 +97,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
 
   if (!business) {
     return (
-      <div className="h-full flex flex-col relative overflow-hidden">
-        <div className="absolute inset-0 scanlines opacity-30 pointer-events-none" />
+      <div className="h-full flex flex-col overflow-hidden">
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <Brain className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
@@ -112,21 +111,18 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
   }
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 scanlines opacity-20 pointer-events-none" />
-      <div className="absolute inset-0 grid-pattern pointer-events-none" />
-
-      <div className="flex-1 p-4 space-y-4 overflow-auto relative z-10">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 p-4 space-y-4 overflow-auto">
         {/* Target Header */}
-        <div className="border border-primary/30 p-4 bg-secondary/50 rounded-lg">
+        <div className="border border-border p-4 bg-secondary/50 rounded-xl shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Target className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+            <span className="text-xs text-muted-foreground">
               Target Identified
             </span>
           </div>
           <h3 className="font-display text-xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+            <Sparkles className="h-5 w-5 text-primary" />
             {typeof business.name === 'string' ? business.name : String(business.name || 'Unknown')}
           </h3>
         </div>
@@ -136,7 +132,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-warning" />
-              <span className="font-display text-sm font-semibold tracking-wide text-warning">
+              <span className="font-display text-sm font-semibold text-warning">
                 Sales Hook
               </span>
             </div>
@@ -144,7 +140,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
               variant="ghost"
               size="sm"
               onClick={copyToClipboard}
-              className="h-8 text-xs text-muted-foreground hover:text-primary rounded-md"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground rounded-md"
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 mr-1" />
@@ -154,7 +150,7 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
               {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>
-          <div className="border border-warning/30 bg-warning/5 p-4 rounded-lg">
+          <div className="border border-border bg-secondary/30 p-4 rounded-lg">
             <p className="text-foreground leading-relaxed text-sm">
               {typeof business.notes === 'string' ? business.notes : (business.notes ? String(business.notes) : 'No sales intelligence available.')}
             </p>
@@ -163,10 +159,10 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
 
         {/* Business Description */}
         <div className="space-y-3">
-          <span className="font-display text-sm font-semibold tracking-wide text-muted-foreground">
+          <span className="font-display text-sm font-semibold text-muted-foreground">
             Business Profile
           </span>
-          <div className="border border-primary/20 bg-muted/30 p-4 rounded-lg">
+          <div className="border border-border bg-muted/30 p-4 rounded-lg">
             <p className="text-muted-foreground text-sm leading-relaxed">
               {typeof business.description === 'string' ? business.description : (business.description ? String(business.description) : 'No description available.')}
             </p>
@@ -177,12 +173,12 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-primary" />
-            <span className="font-display text-sm font-semibold tracking-wide text-primary">
+            <span className="font-display text-sm font-semibold text-primary">
               AI Intel
             </span>
             {aiLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </div>
-          <div className="border border-primary/30 bg-primary/5 p-4 rounded-lg">
+          <div className="border border-border bg-secondary/30 p-4 rounded-lg">
             {aiLoading ? (
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -202,11 +198,11 @@ export function IntelligencePanel({ business }: IntelligencePanelProps) {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Brain className="h-4 w-4 text-primary" />
-            <span className="font-display text-sm font-semibold tracking-wide text-primary">
+            <span className="font-display text-sm font-semibold text-primary">
               Why They Need a Website
             </span>
           </div>
-          <div className="border border-primary/30 bg-primary/5 p-4 rounded-lg">
+          <div className="border border-border bg-secondary/30 p-4 rounded-lg">
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">›</span>

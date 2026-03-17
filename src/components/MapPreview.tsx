@@ -33,7 +33,7 @@ export function MapPreview({ business }: MapPreviewProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Map Embed */}
-      <div className="flex-1 relative bg-secondary/50 border-b border-primary/20">
+      <div className="flex-1 relative bg-secondary/50 border-b border-border">
         {embedSrc ? (
           <iframe
             src={embedSrc}
@@ -45,7 +45,7 @@ export function MapPreview({ business }: MapPreviewProps) {
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-            <MapPin className="h-16 w-16 text-primary/20 mb-4" />
+            <MapPin className="h-16 w-16 text-muted-foreground/20 mb-4" />
             <p className="text-muted-foreground text-sm text-center mb-2">
               Map preview requires API key
             </p>
@@ -57,7 +57,7 @@ export function MapPreview({ business }: MapPreviewProps) {
       </div>
 
       {/* Info Overlay */}
-      <div className="p-3 bg-card border-t border-primary/20">
+      <div className="p-4 bg-card border-t border-border">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h4 className="font-bold text-sm text-foreground truncate">
@@ -76,7 +76,7 @@ export function MapPreview({ business }: MapPreviewProps) {
             variant="outline"
             size="sm"
             asChild
-            className="flex-shrink-0 border-primary/30 hover:bg-primary/10"
+            className="flex-shrink-0 border-border hover:bg-muted/50"
           >
             <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
               <Navigation className="h-3 w-3 mr-1" />

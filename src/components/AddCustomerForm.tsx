@@ -116,9 +116,9 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
 
   return (
     <div className="p-4">
-      <div className="flex items-center gap-2 border-b border-primary/20 pb-3 mb-4">
+      <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
         <UserPlus className="h-4 w-4 text-primary" />
-        <h3 className="font-display text-sm font-semibold tracking-wide text-primary">
+        <h3 className="font-display text-sm font-semibold text-foreground">
           {business ? 'Update Customer' : 'Add to CRM'}
         </h3>
       </div>
@@ -127,7 +127,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
         <DialogTrigger asChild>
           <Button
             variant="outline"
-            className="w-full cyber-button h-10"
+            className="w-full h-10"
           >
             {business ? (
               <>
@@ -142,9 +142,9 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-background border-primary/40 max-w-md shadow-2xl">
+        <DialogContent className="bg-card border-border max-w-md shadow-card-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-primary flex items-center gap-2">
+            <DialogTitle className="font-display text-foreground flex items-center gap-2">
               {isEditMode ? <Edit className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
               {isEditMode ? 'Update Customer' : 'Add New Customer'}
             </DialogTitle>
@@ -155,13 +155,13 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
 
           {/* Editing indicator */}
           {isEditMode && (
-            <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-2 -mt-2">
+            <div className="flex items-center justify-between bg-primary/10 border border-border p-2 -mt-2 rounded-md">
               <span className="text-xs text-primary">
                 Editing: <span className="font-bold">{formData.name}</span>
               </span>
               <button
                 onClick={handleClearForm}
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
               >
                 <RotateCcw className="h-3 w-3" />
                 New Customer
@@ -169,12 +169,12 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label
                   htmlFor="customer-name"
-                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                 >
                   Business Name *
                 </Label>
@@ -182,7 +182,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                   id="customer-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="cyber-input h-9 text-sm"
+                  className="h-9 text-sm"
                   required
                 />
               </div>
@@ -190,7 +190,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
               <div>
                 <Label
                   htmlFor="customer-phone"
-                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                 >
                   Phone *
                 </Label>
@@ -198,7 +198,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                   id="customer-phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="cyber-input h-9 text-sm"
+                  className="h-9 text-sm"
                   required
                 />
               </div>
@@ -208,7 +208,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
               <div>
                 <Label
                   htmlFor="customer-email"
-                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                 >
                   Email
                 </Label>
@@ -217,14 +217,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="cyber-input h-9 text-sm"
+                  className="h-9 text-sm"
                 />
               </div>
 
               <div>
                 <Label
                   htmlFor="customer-status"
-                  className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                 >
                   Status
                 </Label>
@@ -236,11 +236,11 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                 >
                   <SelectTrigger
                     id="customer-status"
-                    className="cyber-input h-9 text-sm"
+                    className="h-9 text-sm"
                   >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-primary/30">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem value="New Lead">New Lead</SelectItem>
                     <SelectItem value="Called">Called</SelectItem>
                     <SelectItem value="Invoice Sent">Invoice Sent</SelectItem>
@@ -254,7 +254,7 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
             <div>
               <Label
                 htmlFor="customer-address"
-                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                className="text-xs text-muted-foreground"
               >
                 Address
               </Label>
@@ -262,14 +262,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                 id="customer-address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="cyber-input h-9 text-sm"
+                className="h-9 text-sm"
               />
             </div>
 
             <div>
               <Label
                 htmlFor="customer-placeid"
-                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                className="text-xs text-muted-foreground"
               >
                 Place ID
               </Label>
@@ -277,14 +277,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                 id="customer-placeid"
                 value={formData.placeId}
                 onChange={(e) => setFormData({ ...formData, placeId: e.target.value })}
-                className="cyber-input h-9 text-sm font-mono"
+                className="h-9 text-sm font-mono"
               />
             </div>
 
             <div>
               <Label
                 htmlFor="customer-description"
-                className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                className="text-xs text-muted-foreground"
               >
                 Description
               </Label>
@@ -294,14 +294,14 @@ export function AddCustomerForm({ business }: AddCustomerFormProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="cyber-input min-h-[60px] text-sm resize-none"
+                className="min-h-[60px] text-sm resize-none"
               />
             </div>
 
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="cyber-button w-full h-10"
+              className="w-full h-10"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -21,8 +21,9 @@ export function StarRating({ rating, maxRating = 5, size = 'sm' }: StarRatingPro
           key={i}
           className={cn(
             sizeClasses[size],
+            'transition-colors duration-200',
             i < rating
-              ? 'fill-primary text-primary'
+              ? 'fill-warning text-warning'
               : 'fill-transparent text-muted-foreground/20'
           )}
         />
