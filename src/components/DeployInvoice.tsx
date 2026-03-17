@@ -278,7 +278,6 @@ export function DeployInvoice({ business }: DeployInvoiceProps) {
     <div className="p-4">
       <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
         <Zap className="h-4 w-4 text-primary" />
-        <DollarSign className="h-4 w-4 text-primary" />
         <h3 className="font-display text-sm font-semibold text-foreground">
           Deploy & Invoice
         </h3>

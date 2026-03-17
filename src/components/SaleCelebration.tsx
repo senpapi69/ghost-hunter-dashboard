@@ -32,7 +32,8 @@ export function SaleCelebration() {
       const duration = 3000;
       const end = Date.now() + duration;
       
-      const colors = ['#00ffff', '#00ff88', '#aa55ff', '#ffd700'];
+      // Brand-aligned confetti colors derived from design tokens
+      const colors = ['#3b82f6', '#22c55e', '#a855f7', '#f59e0b'];
       
       const fireConfetti = () => {
         confetti({
@@ -78,15 +79,15 @@ export function SaleCelebration() {
         isVisible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
-      <div className="bg-background border-b-2 border-success glow-success p-4">
+      <div className="bg-background border-b border-success p-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center animate-bounce">
+            <div className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-success" />
             </div>
             <div>
-              <h2 className="font-display text-2xl font-bold text-success text-glow-success">
-                💰 SALE CLOSED!
+              <h2 className="font-display text-2xl font-bold text-success">
+                SALE CLOSED!
               </h2>
               <p className="text-muted-foreground">
                 <span className="text-foreground font-semibold">{celebrationData.businessName}</span>

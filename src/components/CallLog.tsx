@@ -30,12 +30,12 @@ interface CallLogProps {
   business: Business | null;
 }
 
-const outcomeButtons: { outcome: CallOutcome; icon: typeof Check; label: string; color: string; emoji: string }[] = [
-  { outcome: 'Answered', icon: Check, label: 'Answered', color: 'text-emerald-500 hover:bg-emerald-500/10 border-emerald-500/30', emoji: '✅' },
-  { outcome: 'No Answer', icon: X, label: 'No Answer', color: 'text-red-500 hover:bg-red-500/10 border-red-500/30', emoji: '❌' },
-  { outcome: 'Callback', icon: Calendar, label: 'Callback', color: 'text-amber-500 hover:bg-amber-500/10 border-amber-500/30', emoji: '📅' },
-  { outcome: 'Not Interested', icon: Ban, label: 'Not Interested', color: 'text-muted-foreground hover:bg-muted border-muted', emoji: '🚫' },
-  { outcome: 'Interested', icon: Star, label: 'Interested', color: 'text-violet-500 hover:bg-violet-500/10 border-violet-500/30', emoji: '⭐' },
+const outcomeButtons: { outcome: CallOutcome; icon: typeof Check; label: string; color: string }[] = [
+  { outcome: 'Answered', icon: Check, label: 'Answered', color: 'text-success hover:bg-success/10 border-success/30' },
+  { outcome: 'No Answer', icon: X, label: 'No Answer', color: 'text-destructive hover:bg-destructive/10 border-destructive/30' },
+  { outcome: 'Callback', icon: Calendar, label: 'Callback', color: 'text-warning hover:bg-warning/10 border-warning/30' },
+  { outcome: 'Not Interested', icon: Ban, label: 'Not Interested', color: 'text-muted-foreground hover:bg-muted border-border' },
+  { outcome: 'Interested', icon: Star, label: 'Interested', color: 'text-primary hover:bg-primary/10 border-primary/30' },
 ];
 
 export function CallLog({ business }: CallLogProps) {
@@ -127,14 +127,14 @@ export function CallLog({ business }: CallLogProps) {
                       key={btn.outcome}
                       onClick={() => setSelectedOutcome(btn.outcome)}
                       className={cn(
-                        'h-16 flex flex-col items-center justify-center gap-1 border rounded-md transition-all',
+                        'h-16 flex flex-col items-center justify-center gap-1.5 border rounded-md transition-all',
                         selectedOutcome === btn.outcome
-                          ? 'border-primary bg-primary/10'
+                          ? 'border-primary bg-primary/10 text-primary'
                           : `border-border bg-secondary/30 ${btn.color}`
                       )}
                     >
-                      <span className="text-lg">{btn.emoji}</span>
-                      <span className="text-[9px] leading-tight text-center">{btn.label}</span>
+                      <btn.icon className="h-4 w-4" />
+                      <span className="text-[9px] leading-tight text-center font-medium">{btn.label}</span>
                     </button>
                   ))}
                 </div>
